@@ -11,7 +11,7 @@ OpenCLI turns any website into a command-line tool by bridging your Chrome brows
 
 ## ✨ Highlights
 
-- 🌐 **25+ commands, 13 sites** — Bilibili, Zhihu, GitHub, Twitter/X, Reddit, V2EX, Xiaohongshu, Hacker News…
+- 🌐 **25+ commands, 8 sites** — Bilibili, Zhihu, GitHub, Twitter/X, Reddit, V2EX, Xiaohongshu, Hacker News
 - 🔐 **Account-safe** — Reuses Chrome's logged-in state; your credentials never leave the browser
 - 🤖 **AI Agent ready** — `explore` discovers APIs, `synthesize` generates adapters, `cascade` finds auth strategies
 - 📝 **Declarative YAML** — Most adapters are ~30 lines of YAML pipeline

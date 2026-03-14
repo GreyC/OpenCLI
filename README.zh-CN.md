@@ -11,7 +11,7 @@ OpenCLI 通过 Chrome 浏览器 + [Playwright MCP Bridge](https://github.com/nic
 
 ## ✨ 亮点
 
-- 🌐 **25+ 命令，13 个站点** — B站、知乎、GitHub、Twitter/X、Reddit、V2EX、小红书、Hacker News…
+- 🌐 **25+ 命令，8 个站点** — B站、知乎、GitHub、Twitter/X、Reddit、V2EX、小红书、Hacker News
 - 🔐 **零风控** — 复用 Chrome 登录态，无需存储任何凭证
 - 🤖 **AI 原生** — `explore` 自动发现 API，`synthesize` 生成适配器，`cascade` 探测认证策略
 - 📝 **声明式 YAML** — 大部分适配器只需 ~30 行 YAML
