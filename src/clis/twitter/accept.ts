@@ -31,25 +31,48 @@ cli({
       await page.goto('https://x.com/messages/requests');
       await page.wait(4);
 
-      // Step 2: Get conversation count and preview text to find keyword matches
+      // Step 2: Get conversations with scroll-to-load
       const convInfo = await page.evaluate(`(async () => {
         try {
+          // Wait for initial items
           let attempts = 0;
-          let convs = [];
           while (attempts < 10) {
-            convs = Array.from(document.querySelectorAll('[data-testid="conversation"]'));
+            const convs = document.querySelectorAll('[data-testid="conversation"]');
             if (convs.length > 0) break;
             await new Promise(r => setTimeout(r, 1000));
             attempts++;
           }
+
+          // Scroll to load more
+          const seenCount = new Set();
+          let noNewCount = 0;
+          for (let scroll = 0; scroll < 20; scroll++) {
+            const convs = Array.from(document.querySelectorAll('[data-testid="conversation"]'));
+            const prevSize = seenCount.size;
+            convs.forEach((_, i) => seenCount.add(i));
+            if (convs.length >= ${maxAccepts + 10}) break;
+
+            // Scroll last item into view
+            if (convs.length > 0) {
+              convs[convs.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' });
+            }
+            await new Promise(r => setTimeout(r, 1500));
+
+            if (seenCount.size <= prevSize) {
+              noNewCount++;
+              if (noNewCount >= 3) break;
+            } else {
+              noNewCount = 0;
+            }
+          }
+
+          const convs = Array.from(document.querySelectorAll('[data-testid="conversation"]'));
           if (convs.length === 0) return { ok: false, count: 0, items: [] };
 
-          // Extract preview info from each conversation
           const items = convs.map((conv, idx) => {
             const text = conv.innerText || '';
             const link = conv.querySelector('a[href]');
             const href = link ? link.href : '';
-            // Extract username from the conversation preview
             const lines = text.split('\\n').filter(l => l.trim());
             const user = lines[0] || 'Unknown';
             return { idx, text, href, user };

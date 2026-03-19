@@ -28,40 +28,72 @@ cli({
     await page.goto('https://x.com/messages');
     await page.wait(5);
 
-    // Step 2: Get all conversation URLs
+    // Step 2: Collect conversations with scroll-to-load
+    const needed = maxSend + 10; // extra buffer for skips
     const convList = await page.evaluate(`(async () => {
       try {
+        // Wait for initial items
         let attempts = 0;
-        let items = [];
         while (attempts < 10) {
-          // Try new UI format first
-          items = Array.from(document.querySelectorAll('[data-testid^="dm-conversation-item-"]'));
-          // Fall back to old format
-          if (items.length === 0) {
-            items = Array.from(document.querySelectorAll('[data-testid="conversation"]'));
-          }
+          const items = document.querySelectorAll('[data-testid^="dm-conversation-item-"], [data-testid="conversation"]');
           if (items.length > 0) break;
           await new Promise(r => setTimeout(r, 1000));
           attempts++;
         }
 
-        const conversations = items.map((item, idx) => {
+        // Scroll to load more conversations
+        const needed = ${needed};
+        const seenIds = new Set();
+        let noNewCount = 0;
+
+        for (let scroll = 0; scroll < 30; scroll++) {
+          const items = Array.from(document.querySelectorAll('[data-testid^="dm-conversation-item-"], [data-testid="conversation"]'));
+          items.forEach(el => seenIds.add(el.getAttribute('data-testid')));
+
+          if (seenIds.size >= needed) break;
+
+          // Find the scrollable container and scroll it
+          const scrollContainer = document.querySelector('[data-testid="dm-inbox-panel"]') ||
+                                  items[items.length - 1]?.closest('[class*="scroll"]') ||
+                                  items[items.length - 1]?.parentElement;
+          if (scrollContainer) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          }
+          // Also try scrolling the last item into view
+          if (items.length > 0) {
+            items[items.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' });
+          }
+
+          await new Promise(r => setTimeout(r, 1500));
+
+          // Check if new items appeared
+          const newItems = Array.from(document.querySelectorAll('[data-testid^="dm-conversation-item-"], [data-testid="conversation"]'));
+          const newIds = new Set(newItems.map(el => el.getAttribute('data-testid')));
+          if (newIds.size <= seenIds.size) {
+            noNewCount++;
+            if (noNewCount >= 3) break; // No more loading after 3 tries
+          } else {
+            noNewCount = 0;
+          }
+        }
+
+        // Collect all visible conversations
+        const finalItems = Array.from(document.querySelectorAll('[data-testid^="dm-conversation-item-"], [data-testid="conversation"]'));
+        const conversations = finalItems.map((item, idx) => {
           const testId = item.getAttribute('data-testid') || '';
           const text = item.innerText || '';
           const lines = text.split('\\n').filter(l => l.trim());
           const user = lines[0] || 'Unknown';
-          // Extract conversation IDs from testId like "dm-conversation-item-123:456"
           const match = testId.match(/dm-conversation-item-(.+)/);
           const convId = match ? match[1].replace(':', '-') : '';
-          // Or from anchor href
           const link = item.querySelector('a[href*="/messages/"]');
           const href = link ? link.href : '';
           return { idx, user, convId, href, preview: text.substring(0, 100) };
         });
 
-        return { ok: true, conversations };
+        return { ok: true, conversations, total: conversations.length };
       } catch(e) {
-        return { ok: false, error: String(e), conversations: [] };
+        return { ok: false, error: String(e), conversations: [], total: 0 };
       }
     })()`);
 
@@ -69,25 +101,21 @@ cli({
       return [{ index: 1, status: 'info', user: 'System', message: 'No conversations found' }];
     }
 
-    const conversations = convList.conversations.slice(0, maxSend + 5); // get a few extra in case some are skipped
+    const conversations = convList.conversations;
 
     // Step 3: Iterate through conversations and send message
     for (const conv of conversations) {
       if (sentCount >= maxSend) break;
 
-      // Navigate to the conversation
       const convUrl = conv.convId
         ? `https://x.com/messages/${conv.convId}`
         : conv.href;
 
-      if (!convUrl) {
-        continue;
-      }
+      if (!convUrl) continue;
 
       await page.goto(convUrl);
       await page.wait(3);
 
-      // Check if already replied with same text, type message, and send
       const sendResult = await page.evaluate(`(async () => {
         try {
           const messageText = ${JSON.stringify(messageText)};
@@ -97,7 +125,7 @@ cli({
           const dmHeader = document.querySelector('[data-testid="DmActivityContainer"] [dir="ltr"] span') ||
                            document.querySelector('[data-testid="conversation-header"]') ||
                            document.querySelector('[data-testid="DmActivityContainer"] h2');
-          const username = dmHeader ? dmHeader.innerText.trim().split('\\n')[0] : '${conv.user}';
+          const username = dmHeader ? dmHeader.innerText.trim().split('\\\\n')[0] : '${conv.user}';
 
           // Check if we already sent this message
           if (skipReplied) {
@@ -118,8 +146,6 @@ cli({
           // Focus and type into the DraftEditor
           input.focus();
           await new Promise(r => setTimeout(r, 300));
-
-          // For DraftEditor (contenteditable), we need to use execCommand or insertText
           document.execCommand('insertText', false, messageText);
           await new Promise(r => setTimeout(r, 500));
 
@@ -147,7 +173,6 @@ cli({
           message: sendResult.message,
         });
       } else if (sendResult?.status === 'skipped') {
-        // Don't count skipped ones
         results.push({
           index: results.length + 1,
           status: 'skipped',
@@ -156,7 +181,6 @@ cli({
         });
       }
 
-      // Brief pause between sends to avoid rate limiting
       await page.wait(1);
     }
 
