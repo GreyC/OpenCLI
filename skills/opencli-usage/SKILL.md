@@ -106,11 +106,32 @@ Usage: `opencli <site> <command> [args] [--limit N] [-f json|yaml|md|csv|table]`
 | **gemini** | `ask` `new` `image` `deep-research` `deep-research-result` |
 | **notebooklm** | `status` `list` `open` `current` `get` `history` `summary` `note-list` `notes-get` `source-list` `source-get` `source-fulltext` `source-guide` |
 
+### External CLI (passthrough)
+
+OpenCLI can discover, auto-install, and passthrough commands to external CLI tools. Use `opencli install <name>` to auto-install, or `opencli register <name>` to register a local CLI.
+
+| CLI | Description | Commands |
+|-----|-------------|----------|
+| **gh** | GitHub CLI — repos, PRs, issues, releases | `repo` `pr` `issue` (all gh subcommands) |
+| **obsidian** | Obsidian vault — notes, search, tags | All obsidian subcommands |
+| **docker** | Docker CLI | All docker subcommands |
+| **lark-cli** | Lark/Feishu — messages, docs, calendar, tasks (200+ commands) | All lark-cli subcommands |
+| **dws** | DingTalk Workspace — messages, docs, calendar, contacts | All dws subcommands |
+| **wecom-cli** | WeCom/企业微信 — contacts, todos, meetings, messages | All wecom-cli subcommands |
+| **vercel** | Vercel — deploy, domains, env vars, logs | All vercel subcommands |
+
+```bash
+opencli install gh              # Auto-install gh CLI
+opencli register my-tool        # Register a local custom CLI
+opencli gh pr list --limit 5    # Passthrough to gh
+opencli docker ps               # Passthrough to docker
+opencli lark-cli msg send ...   # Passthrough to lark-cli
+```
+
 ### Desktop (CDP/Electron)
 
 | Site | Commands |
 |------|----------|
-| **gh** | `repo` `pr` `issue` — passthrough to gh CLI |
 | **cursor** | `status` `send` `read` `new` `dump` `composer` `model` `extract-code` `ask` `screenshot` `history` `export` |
 | **codex** | `status` `send` `read` `new` `dump` `extract-diff` `model` `ask` `screenshot` `history` `export` |
 | **chatgpt** | `status` `new` `send` `read` `ask` `model` |
