@@ -433,6 +433,30 @@ async function loadProfileIdentity() {
   profileId = id;
   profileLabel = label;
 }
+function defaultLabelFor(id) {
+  return `Profile-${id.slice(0, 8)}`;
+}
+async function renameProfile(label) {
+  if (!profileId) await loadProfileIdentity();
+  const cleaned = label?.trim();
+  const finalLabel = cleaned && cleaned.length > 0 ? cleaned.slice(0, 60) : defaultLabelFor(profileId);
+  await chrome.storage.local.set({ profileLabel: finalLabel });
+  profileLabel = finalLabel;
+  if (ws?.readyState === WebSocket.OPEN) {
+    try {
+      ws.send(JSON.stringify({
+        type: "hello",
+        version: chrome.runtime.getManifest().version,
+        compatRange: ">=1.7.0",
+        profileId,
+        profileLabel
+      }));
+    } catch (err) {
+      console.warn("[opencli] Failed to re-announce renamed label:", err);
+    }
+  }
+  return finalLabel;
+}
 const _origLog = console.log.bind(console);
 const _origWarn = console.warn.bind(console);
 const _origError = console.error.bind(console);
@@ -643,6 +667,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       reconnecting: reconnectTimer !== null,
       profileLabel
     });
+    return false;
+  }
+  if (msg?.type === "renameProfile") {
+    const newLabel = typeof msg.label === "string" ? msg.label : null;
+    renameProfile(newLabel).then((finalLabel) => sendResponse({ ok: true, profileLabel: finalLabel })).catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
   }
   return false;
 });
