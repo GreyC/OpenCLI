@@ -62,9 +62,10 @@ cli({
     const authorLink = el.querySelector('h2 a, h3 a, h4 a, strong a') || el.querySelector('a[href*="/"][role="link"], a[href*="facebook.com"]');
     const author = authorLink ? authorLink.textContent.trim() : '';
 
+    const seen = new Set();
     const dirAutos = Array.from(el.querySelectorAll('[dir="auto"]'))
       .map(s => s.textContent.trim())
-      .filter(t => t.length > 10 && t.length < 600);
+      .filter(t => t.length > 10 && t.length < 600 && !seen.has(t) && seen.add(t));
     const content = dirAutos.join(' ');
 
     const allText = el.textContent;
