@@ -59,8 +59,23 @@ cli({
 
   // ── Extract fields from a post container ─────────────────────────────
   function extractPost(el, i) {
-    const authorLink = el.querySelector('h2 a, h3 a, h4 a, strong a') || el.querySelector('a[href*="/"][role="link"], a[href*="facebook.com"]');
-    const author = authorLink ? authorLink.textContent.trim() : '';
+    // Try progressively broader selectors: heading links → role=link → any profile link → first substantial link
+    const authorLink =
+      el.querySelector('h2 a, h3 a, h4 a, strong a') ||
+      el.querySelector('a[href*="/"][role="link"]') ||
+      el.querySelector('a[href*="facebook.com/"]') ||
+      Array.from(el.querySelectorAll('a[href]')).find(a => {
+        const t = a.textContent.trim();
+        return t.length > 2 && t.length < 60 && !/^(like|comment|share|follow|\\d)/i.test(t);
+      });
+    // Fallback for sponsored posts where the advertiser name is not in a link
+    const author = (authorLink ? authorLink.textContent.trim() : '') ||
+      (() => {
+        const short = Array.from(el.querySelectorAll('[dir="auto"]'))
+          .map(s => s.textContent.trim())
+          .find(t => t.length > 2 && t.length <= 60 && !t.startsWith('#'));
+        return short || '';
+      })();
 
     const seen = new Set();
     const dirAutos = Array.from(el.querySelectorAll('[dir="auto"]'))
@@ -87,20 +102,35 @@ cli({
     };
   }
 
-  // ── Route to primary or fallback ─────────────────────────────────────
-  if (primaryPosts.length > 0) {
+  // ── Route: primary alone if sufficient, else supplement with fallback ──
+  const isNotSuggestion = el => {
+    const t = el.textContent.trim();
+    return !t.startsWith('可能认识') && !t.startsWith('People you may know') && !t.startsWith('People You May Know');
+  };
+
+  if (primaryPosts.length >= limit) {
     return primaryPosts.slice(0, limit).map((el, i) => extractPost(el, i));
   }
 
   const fallbackContainers = fallbackExtract();
-  if (fallbackContainers && fallbackContainers.length > 0) {
-    return fallbackContainers
-      .filter(el => {
-        const t = el.textContent.trim();
-        return !t.startsWith('可能认识') && !t.startsWith('People you may know') && !t.startsWith('People You May Know');
-      })
-      .slice(0, limit)
-      .map((el, i) => extractPost(el, i));
+  const fallbackPosts = fallbackContainers ? fallbackContainers.filter(isNotSuggestion) : [];
+
+  if (primaryPosts.length > 0 || fallbackPosts.length > 0) {
+    const primarySet = new WeakSet(primaryPosts);
+    const extra = fallbackPosts.filter(el => !primarySet.has(el));
+    const combined = [...primaryPosts, ...extra];
+    // Deduplicate nested containers of the same post: containers sharing
+    // the same first [dir="auto"] block are the same post at different DOM levels.
+    const seenContent = new Set();
+    const deduped = combined.filter(el => {
+      const first = Array.from(el.querySelectorAll('[dir="auto"]'))
+        .map(s => s.textContent.trim()).find(t => t.length > 5) || '';
+      const key = first.substring(0, 100);
+      if (!key || seenContent.has(key)) return false;
+      seenContent.add(key);
+      return true;
+    });
+    return deduped.slice(0, limit).map((el, i) => extractPost(el, i));
   }
 
   // ── Diagnostic when both paths return nothing ─────────────────────────
