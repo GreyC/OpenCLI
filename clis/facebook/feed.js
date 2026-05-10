@@ -70,18 +70,18 @@ cli({
       : '';
 
     const allText = el.textContent;
-    const likesMatch = allText.match(/所有心情：([\d,.\s]*[\d万亿KMk]+)/) ||
-                       allText.match(/All:\s*([\d,.KMk]+)/) ||
-                       allText.match(/([\d,.KMk]+)\s*(?:likes?|reactions?)/i);
-    const commentsMatch = allText.match(/([\d,.]+\s*[万亿]?)\s*条评论/) ||
-                          allText.match(/([\d,.KMk]+)\s*comments?/i);
-    const sharesMatch = allText.match(/([\d,.]+\s*[万亿]?)\s*次分享/) ||
-                        allText.match(/([\d,.KMk]+)\s*shares?/i);
+    const likesMatch = allText.match(/所有心情：([\\d,.\\s]*[\\d万亿KMk]+)/) ||
+                       allText.match(/All:\\s*([\\d,.KMk]+)/) ||
+                       allText.match(/([\\d,.KMk]+)\\s*(?:likes?|reactions?)/i);
+    const commentsMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*条评论/) ||
+                          allText.match(/([\\d,.KMk]+)\\s*comments?/i);
+    const sharesMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*次分享/) ||
+                        allText.match(/([\\d,.KMk]+)\\s*shares?/i);
 
     return {
       index: i + 1,
       author: author.substring(0, 50),
-      content: content.replace(/\n/g, ' ').substring(0, 120),
+      content: content.replace(/\\n/g, ' ').substring(0, 120),
       likes: likesMatch ? likesMatch[1] : '-',
       comments: commentsMatch ? commentsMatch[1] : '-',
       shares: sharesMatch ? sharesMatch[1] : '-',
