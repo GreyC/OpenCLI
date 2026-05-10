@@ -13,47 +13,107 @@ cli({
         { navigate: { url: 'https://www.facebook.com/', settleMs: 4000 } },
         { evaluate: `(() => {
   const limit = \${{ args.limit }};
-  const posts = document.querySelectorAll('[role="article"]');
-  return Array.from(posts)
+
+  // ── Primary extraction via [role="article"] ──────────────────────────
+  const articleNodes = document.querySelectorAll('[role="article"]');
+  const primaryPosts = Array.from(articleNodes)
     .filter(el => {
       const text = el.textContent.trim();
-      // Filter out "People you may know" suggestions (both CN and EN)
       return text.length > 30 &&
         !text.startsWith('可能认识') &&
         !text.startsWith('People you may know') &&
         !text.startsWith('People You May Know');
-    })
-    .slice(0, limit)
-    .map((el, i) => {
-      // Author from header link
-      const headerLink = el.querySelector('h2 a, h3 a, h4 a, strong a');
-      const author = headerLink ? headerLink.textContent.trim() : '';
-
-      // Post text: grab visible spans, filter noise
-      const spans = Array.from(el.querySelectorAll('div[dir="auto"]'))
-        .map(s => s.textContent.trim())
-        .filter(t => t.length > 10 && t.length < 500);
-      const content = spans.length > 0 ? spans[0] : '';
-
-      // Engagement: find like/comment/share counts (CN + EN)
-      const allText = el.textContent;
-      const likesMatch = allText.match(/所有心情：([\\d,.\\s]*[\\d万亿KMk]+)/) ||
-                         allText.match(/All:\\s*([\\d,.KMk]+)/) ||
-                         allText.match(/([\\d,.KMk]+)\\s*(?:likes?|reactions?)/i);
-      const commentsMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*条评论/) ||
-                            allText.match(/([\\d,.KMk]+)\\s*comments?/i);
-      const sharesMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*次分享/) ||
-                          allText.match(/([\\d,.KMk]+)\\s*shares?/i);
-
-      return {
-        index: i + 1,
-        author: author.substring(0, 50),
-        content: content.replace(/\\n/g, ' ').substring(0, 120),
-        likes: likesMatch ? likesMatch[1] : '-',
-        comments: commentsMatch ? commentsMatch[1] : '-',
-        shares: sharesMatch ? sharesMatch[1] : '-',
-      };
     });
+
+  // ── Fallback extraction via action buttons ────────────────────────────
+  // Facebook periodically restructures its DOM so [role="article"] nodes
+  // exist but have empty textContent. When that happens we locate post
+  // boundaries via the Like/Comment action buttons, then walk up the DOM
+  // to the nearest ancestor that contains meaningful text.
+  function fallbackExtract() {
+    const main = document.querySelector('[role="main"]');
+    if (!main) return null;
+
+    const likeSelectors = [
+      '[aria-label="Like"]', '[aria-label="赞"]',
+      '[aria-label="Comment"]', '[aria-label="评论"]',
+    ];
+    const actionButtons = Array.from(
+      main.querySelectorAll(likeSelectors.join(','))
+    );
+
+    const seen = new WeakSet();
+    const containers = [];
+    for (const btn of actionButtons) {
+      let node = btn.parentElement;
+      let found = null;
+      for (let depth = 0; depth < 20 && node; depth++, node = node.parentElement) {
+        if (node.textContent.trim().length >= 150) { found = node; break; }
+      }
+      if (!found || seen.has(found)) continue;
+      seen.add(found);
+      containers.push(found);
+    }
+    return containers.length ? containers : null;
+  }
+
+  // ── Extract fields from a post container ─────────────────────────────
+  function extractPost(el, i) {
+    const authorLink = el.querySelector('a[href*="/"][role="link"], a[href*="facebook.com"]');
+    const author = authorLink ? authorLink.textContent.trim() : '';
+
+    const dirAutos = Array.from(el.querySelectorAll('[dir="auto"]'))
+      .map(s => s.textContent.trim())
+      .filter(t => t.length > 10 && t.length < 600);
+    const content = dirAutos.length > 0
+      ? dirAutos.reduce((a, b) => a.length >= b.length ? a : b, '')
+      : '';
+
+    const allText = el.textContent;
+    const likesMatch = allText.match(/所有心情：([\d,.\s]*[\d万亿KMk]+)/) ||
+                       allText.match(/All:\s*([\d,.KMk]+)/) ||
+                       allText.match(/([\d,.KMk]+)\s*(?:likes?|reactions?)/i);
+    const commentsMatch = allText.match(/([\d,.]+\s*[万亿]?)\s*条评论/) ||
+                          allText.match(/([\d,.KMk]+)\s*comments?/i);
+    const sharesMatch = allText.match(/([\d,.]+\s*[万亿]?)\s*次分享/) ||
+                        allText.match(/([\d,.KMk]+)\s*shares?/i);
+
+    return {
+      index: i + 1,
+      author: author.substring(0, 50),
+      content: content.replace(/\n/g, ' ').substring(0, 120),
+      likes: likesMatch ? likesMatch[1] : '-',
+      comments: commentsMatch ? commentsMatch[1] : '-',
+      shares: sharesMatch ? sharesMatch[1] : '-',
+    };
+  }
+
+  // ── Route to primary or fallback ─────────────────────────────────────
+  if (primaryPosts.length > 0) {
+    return primaryPosts.slice(0, limit).map((el, i) => extractPost(el, i));
+  }
+
+  const fallbackContainers = fallbackExtract();
+  if (fallbackContainers && fallbackContainers.length > 0) {
+    return fallbackContainers
+      .filter(el => {
+        const t = el.textContent.trim();
+        return !t.startsWith('可能认识') && !t.startsWith('People you may know');
+      })
+      .slice(0, limit)
+      .map((el, i) => extractPost(el, i));
+  }
+
+  // ── Diagnostic when both paths return nothing ─────────────────────────
+  const mainEl = document.querySelector('[role="main"]');
+  const articleCount = articleNodes.length;
+  const mainLen = mainEl ? mainEl.textContent.trim().length : 0;
+  throw new Error(
+    'facebook feed: no posts found. ' +
+    'article nodes=' + articleCount + ' (all empty text), ' +
+    'main textLength=' + mainLen + '. ' +
+    'The page may not be fully loaded or Facebook DOM changed again.'
+  );
 })()
 ` },
     ],
