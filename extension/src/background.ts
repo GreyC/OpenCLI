@@ -100,16 +100,19 @@ async function connect(): Promise<void> {
     return; // daemon not running — skip WebSocket to avoid console noise
   }
 
+  let thisWs: WebSocket;
   try {
     const contextId = await getCurrentContextId();
-    ws = new WebSocket(DAEMON_WS_URL);
+    thisWs = new WebSocket(DAEMON_WS_URL);
+    ws = thisWs;
     currentContextId = contextId;
   } catch {
     scheduleReconnect();
     return;
   }
 
-  ws.onopen = () => {
+  thisWs.onopen = () => {
+    if (ws !== thisWs) return;
     console.log('[opencli] Connected to daemon');
     reconnectAttempts = 0; // Reset on successful connection
     if (reconnectTimer) {
@@ -117,7 +120,7 @@ async function connect(): Promise<void> {
       reconnectTimer = null;
     }
     // Send version + compatibility range so the daemon can report mismatches to the CLI
-    ws?.send(JSON.stringify({
+    thisWs.send(JSON.stringify({
       type: 'hello',
       contextId: currentContextId,
       version: chrome.runtime.getManifest().version,
@@ -125,24 +128,25 @@ async function connect(): Promise<void> {
     }));
   };
 
-  ws.onmessage = async (event) => {
+  thisWs.onmessage = async (event) => {
     try {
       const command = JSON.parse(event.data as string) as Command;
       const result = await handleCommand(command);
-      ws?.send(JSON.stringify(result));
+      thisWs.send(JSON.stringify(result));
     } catch (err) {
       console.error('[opencli] Message handling error:', err);
     }
   };
 
-  ws.onclose = () => {
+  thisWs.onclose = () => {
+    if (ws !== thisWs) return;
     console.log('[opencli] Disconnected from daemon');
     ws = null;
     scheduleReconnect();
   };
 
-  ws.onerror = () => {
-    ws?.close();
+  thisWs.onerror = () => {
+    thisWs.close();
   };
 }
 
