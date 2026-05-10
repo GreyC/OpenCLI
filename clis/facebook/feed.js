@@ -48,7 +48,7 @@ cli({
       let node = btn.parentElement;
       let found = null;
       for (let depth = 0; depth < 20 && node; depth++, node = node.parentElement) {
-        if (node.textContent.trim().length >= 150) { found = node; break; }
+        if (node.textContent.trim().length >= 80) { found = node; break; }
       }
       if (!found || seen.has(found)) continue;
       seen.add(found);
@@ -59,15 +59,13 @@ cli({
 
   // ── Extract fields from a post container ─────────────────────────────
   function extractPost(el, i) {
-    const authorLink = el.querySelector('a[href*="/"][role="link"], a[href*="facebook.com"]');
+    const authorLink = el.querySelector('h2 a, h3 a, h4 a, strong a') || el.querySelector('a[href*="/"][role="link"], a[href*="facebook.com"]');
     const author = authorLink ? authorLink.textContent.trim() : '';
 
     const dirAutos = Array.from(el.querySelectorAll('[dir="auto"]'))
       .map(s => s.textContent.trim())
       .filter(t => t.length > 10 && t.length < 600);
-    const content = dirAutos.length > 0
-      ? dirAutos.reduce((a, b) => a.length >= b.length ? a : b, '')
-      : '';
+    const content = dirAutos.join(' ');
 
     const allText = el.textContent;
     const likesMatch = allText.match(/所有心情：([\\d,.\\s]*[\\d万亿KMk]+)/) ||
@@ -98,7 +96,7 @@ cli({
     return fallbackContainers
       .filter(el => {
         const t = el.textContent.trim();
-        return !t.startsWith('可能认识') && !t.startsWith('People you may know');
+        return !t.startsWith('可能认识') && !t.startsWith('People you may know') && !t.startsWith('People You May Know');
       })
       .slice(0, limit)
       .map((el, i) => extractPost(el, i));
