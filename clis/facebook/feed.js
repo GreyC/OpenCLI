@@ -119,13 +119,15 @@ cli({
     const primarySet = new WeakSet(primaryPosts);
     const extra = fallbackPosts.filter(el => !primarySet.has(el));
     const combined = [...primaryPosts, ...extra];
-    // Deduplicate nested containers of the same post: containers sharing
-    // the same first [dir="auto"] block are the same post at different DOM levels.
+    // Deduplicate nested containers of the same post: same-post ancestors
+    // share all [dir="auto"] blocks, so joining them gives a stable signature.
+    // Different posts by the same author differ in body text even if they
+    // share an author-name prefix, so they won't collide here.
     const seenContent = new Set();
     const deduped = combined.filter(el => {
-      const first = Array.from(el.querySelectorAll('[dir="auto"]'))
-        .map(s => s.textContent.trim()).find(t => t.length > 5) || '';
-      const key = first.substring(0, 100);
+      const key = Array.from(el.querySelectorAll('[dir="auto"]'))
+        .map(s => s.textContent.trim()).filter(t => t.length > 5)
+        .join('|').substring(0, 200);
       if (!key || seenContent.has(key)) return false;
       seenContent.add(key);
       return true;
