@@ -70,11 +70,22 @@ const _origWarn = console.warn.bind(console);
 const _origError = console.error.bind(console);
 
 function forwardLog(level: 'info' | 'warn' | 'error', args: unknown[]): void {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
   try {
     const msg = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    ws.send(JSON.stringify({ type: 'log', level, msg, ts: Date.now() }));
+    safeSend(ws, { type: 'log', level, msg, ts: Date.now() });
   } catch { /* don't recurse */ }
+}
+
+function safeSend(socket: WebSocket | null | undefined, payload: unknown): boolean {
+  if (!socket || socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
+    return false;
+  }
+  try {
+    socket.send(JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 console.log = (...args: unknown[]) => { _origLog(...args); forwardLog('info', args); };
@@ -120,19 +131,19 @@ async function connect(): Promise<void> {
       reconnectTimer = null;
     }
     // Send version + compatibility range so the daemon can report mismatches to the CLI
-    thisWs.send(JSON.stringify({
+    safeSend(thisWs, {
       type: 'hello',
       contextId: currentContextId,
       version: chrome.runtime.getManifest().version,
       compatRange: __OPENCLI_COMPAT_RANGE__,
-    }));
+    });
   };
 
   thisWs.onmessage = async (event) => {
     try {
       const command = JSON.parse(event.data as string) as Command;
       const result = await handleCommand(command);
-      thisWs.send(JSON.stringify(result));
+      safeSend(thisWs, result);
     } catch (err) {
       console.error('[opencli] Message handling error:', err);
     }

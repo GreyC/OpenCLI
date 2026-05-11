@@ -671,11 +671,21 @@ const _origLog = console.log.bind(console);
 const _origWarn = console.warn.bind(console);
 const _origError = console.error.bind(console);
 function forwardLog(level, args) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
   try {
     const msg = args.map((a) => typeof a === "string" ? a : JSON.stringify(a)).join(" ");
-    ws.send(JSON.stringify({ type: "log", level, msg, ts: Date.now() }));
+    safeSend(ws, { type: "log", level, msg, ts: Date.now() });
   } catch {
+  }
+}
+function safeSend(socket, payload) {
+  if (!socket || socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
+    return false;
+  }
+  try {
+    socket.send(JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
   }
 }
 console.log = (...args) => {
@@ -716,18 +726,18 @@ async function connect() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    thisWs.send(JSON.stringify({
+    safeSend(thisWs, {
       type: "hello",
       contextId: currentContextId,
       version: chrome.runtime.getManifest().version,
       compatRange: ">=1.7.0"
-    }));
+    });
   };
   thisWs.onmessage = async (event) => {
     try {
       const command = JSON.parse(event.data);
       const result = await handleCommand(command);
-      thisWs.send(JSON.stringify(result));
+      safeSend(thisWs, result);
     } catch (err) {
       console.error("[opencli] Message handling error:", err);
     }
