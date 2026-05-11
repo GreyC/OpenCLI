@@ -239,20 +239,60 @@ export async function navigateToGeekChat(page, waitSeconds = 2) {
 }
 /**
  * Read the encryptSystemId value required by the geek-side list API.
- * Tries cookie, inline script tags, known window globals, a full window scan,
- * and localStorage. Returns empty string if not found — the API may still
- * succeed without it, and any server-side error will surface a clearer message.
+ * Strategy (in order):
+ *   1. Vue app state / Pinia stores / $route.query (Option 1 — runtime source)
+ *   2. performance.getEntriesByType('resource') — parse from geekFilterByLabel URL
+ *      that the page itself already issued (Option 2 — most deterministic)
+ *   3. cookie, inline <script> SSR state, known window globals, localStorage (fallbacks)
+ * Returns empty string if nothing is found; the API may still succeed without it.
  * Caller must have navigated to the geek chat page first.
  */
 export async function readEncryptSystemId(page) {
     const result = await page.evaluate(`
     (() => {
-      // 1. cookie
+      // 1. Vue app state / Pinia / $route.query
+      // The chat component reads encryptSystemId from the app runtime to build
+      // its own geekFilterByLabel request, so the value lives in the Vue tree.
+      try {
+        const appEl = document.querySelector('#app') || document.querySelector('[data-v-app]');
+        const vueApp = appEl && (appEl.__vue_app__ || appEl._vei);
+        if (vueApp) {
+          // 1a. Pinia stores (Vue 3 standard state management on BOSS直聘)
+          const pinia = vueApp.config && vueApp.config.globalProperties.$pinia;
+          if (pinia && pinia.state && pinia.state.value) {
+            for (const store of Object.values(pinia.state.value)) {
+              try {
+                const flat = JSON.stringify(store);
+                if (flat.includes('encryptSystemId')) {
+                  const m = flat.match(/"encryptSystemId":"([^"]+)"/);
+                  if (m) return m[1];
+                }
+              } catch (_) {}
+            }
+          }
+          // 1b. Vue Router current route query
+          const router = vueApp.config && vueApp.config.globalProperties.$router;
+          const query = router && router.currentRoute && router.currentRoute.value && router.currentRoute.value.query;
+          if (query && query.encryptSystemId) return query.encryptSystemId;
+        }
+      } catch (_) {}
+      // 2. Performance resource entries — the page already issued geekFilterByLabel
+      // with encryptSystemId in the URL; read it back from the resource timing API.
+      try {
+        const entries = performance.getEntriesByType('resource');
+        for (const entry of entries) {
+          if (!entry.name.includes('geekFilterByLabel')) continue;
+          const u = new URL(entry.name);
+          const v = u.searchParams.get('encryptSystemId');
+          if (v) return v;
+        }
+      } catch (_) {}
+      // 3. cookie
       try {
         const m = document.cookie.match(/encryptSystemId=([^;]+)/i);
         if (m) return decodeURIComponent(m[1]);
       } catch (_) {}
-      // 2. inline <script> tags (Nuxt SSR state is often embedded here)
+      // 4. inline <script> SSR state (Nuxt embeds server state here)
       try {
         for (const s of document.querySelectorAll('script:not([src])')) {
           const t = s.textContent || '';
@@ -261,7 +301,7 @@ export async function readEncryptSystemId(page) {
           if (m) return m[1];
         }
       } catch (_) {}
-      // 3. known BOSS / Nuxt window globals
+      // 5. known BOSS / Nuxt window globals
       const KNOWN = [
         '__NUXT__', '__INITIAL_STATE__', '__ZP_INFO__', '__BOSS_ZP__',
         'pageGlobalVar', 'ZP_DATA', '__ZP_DATA__', '__PAGE_DATA__',
@@ -276,22 +316,7 @@ export async function readEncryptSystemId(page) {
           if (m) return m[1];
         } catch (_) {}
       }
-      // 4. broad window scan (catches any other global holding the value)
-      try {
-        for (const k of Object.keys(window)) {
-          if (/^on|^HTML|^CSS|^SVG|^Math|^JSON|^performance/.test(k)) continue;
-          const obj = window[k];
-          if (!obj || typeof obj !== 'object') continue;
-          try {
-            const flat = JSON.stringify(obj);
-            if (flat && flat.includes('encryptSystemId')) {
-              const m = flat.match(/"encryptSystemId":"([^"]+)"/);
-              if (m) return m[1];
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
-      // 5. localStorage — any value containing the key, or key named after it
+      // 6. localStorage
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
