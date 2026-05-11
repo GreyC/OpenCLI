@@ -26,10 +26,11 @@ function mapBossRow(f) {
 async function buildGeekRows(page, limit) {
     const encryptSystemId = await readEncryptSystemId(page);
     const labelList = await fetchGeekFriendLabelList(page, { encryptSystemId });
-    const friendIds = labelList.map((f) => f.friendId).filter(Boolean);
+    const slicedLabels = labelList.slice(0, limit);
+    const friendIds = slicedLabels.map((f) => f.friendId).filter(Boolean);
     const enriched = await fetchGeekFriendInfoList(page, friendIds);
     const enrichMap = new Map(enriched.map((f) => [String(f.friendId ?? f.uid), f]));
-    return labelList.slice(0, limit).map((f) => {
+    return slicedLabels.map((f) => {
         const e = enrichMap.get(String(f.friendId)) || {};
         return {
             name: e.name || f.name || '',

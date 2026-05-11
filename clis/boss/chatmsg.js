@@ -32,8 +32,8 @@ function mapGeekMsg(m) {
     };
 }
 
-async function bossChatMsg(page, kwargs) {
-    const friend = await findFriendByUid(page, kwargs.uid);
+async function bossChatMsg(page, kwargs, existingFriend) {
+    const friend = existingFriend ?? await findFriendByUid(page, kwargs.uid);
     if (!friend) throw new Error('未找到该候选人');
     const gid = friend.uid;
     const securityId = encodeURIComponent(friend.securityId);
@@ -85,15 +85,9 @@ cli({
         await navigateToChat(page);
         const bossResult = await findFriendByUid(page, kwargs.uid, { allowNonZero: true });
         if (bossResult?.friend) {
-            const friend = bossResult.friend;
-            const gid = friend.uid;
-            const securityId = encodeURIComponent(friend.securityId);
-            const msgUrl = `https://www.zhipin.com/wapi/zpchat/boss/historyMsg?gid=${gid}&securityId=${securityId}&page=${kwargs.page}&c=20&src=0`;
-            const msgData = await bossFetch(page, msgUrl);
-            const messages = msgData.zpData?.messages || msgData.zpData?.historyMsgList || [];
-            return messages.map((m) => mapBossMsg(m, friend));
+            return await bossChatMsg(page, kwargs, bossResult.friend);
         }
-        // Not found in recruiter list or identity mismatch — check for hard errors first
+        // Not found or identity mismatch — check for hard errors before falling back
         if (bossResult?.code && bossResult.code !== 0 && bossResult.code !== IDENTITY_MISMATCH_CODE) {
             assertOk(bossResult);
         }

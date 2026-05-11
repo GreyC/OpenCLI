@@ -239,41 +239,78 @@ export async function navigateToGeekChat(page, waitSeconds = 2) {
 }
 /**
  * Read the encryptSystemId value required by the geek-side list API.
- * Tries document.cookie, then window globals, then localStorage.
- * Throws if nothing is found — caller must have navigated to the geek chat page first.
+ * Tries cookie, inline script tags, known window globals, a full window scan,
+ * and localStorage. Returns empty string if not found — the API may still
+ * succeed without it, and any server-side error will surface a clearer message.
+ * Caller must have navigated to the geek chat page first.
  */
 export async function readEncryptSystemId(page) {
     const result = await page.evaluate(`
     (() => {
+      // 1. cookie
       try {
         const m = document.cookie.match(/encryptSystemId=([^;]+)/i);
         if (m) return decodeURIComponent(m[1]);
       } catch (_) {}
-      const sources = [window.__NUXT__, window.__INITIAL_STATE__];
-      for (const s of sources) {
-        if (!s) continue;
+      // 2. inline <script> tags (Nuxt SSR state is often embedded here)
+      try {
+        for (const s of document.querySelectorAll('script:not([src])')) {
+          const t = s.textContent || '';
+          if (!t.includes('encryptSystemId')) continue;
+          const m = t.match(/"encryptSystemId":"([^"]+)"/);
+          if (m) return m[1];
+        }
+      } catch (_) {}
+      // 3. known BOSS / Nuxt window globals
+      const KNOWN = [
+        '__NUXT__', '__INITIAL_STATE__', '__ZP_INFO__', '__BOSS_ZP__',
+        'pageGlobalVar', 'ZP_DATA', '__ZP_DATA__', '__PAGE_DATA__',
+      ];
+      for (const k of KNOWN) {
+        const obj = window[k];
+        if (!obj || typeof obj !== 'object') continue;
         try {
-          const flat = JSON.stringify(s);
+          const flat = JSON.stringify(obj);
+          if (!flat.includes('encryptSystemId')) continue;
           const m = flat.match(/"encryptSystemId":"([^"]+)"/);
           if (m) return m[1];
         } catch (_) {}
       }
+      // 4. broad window scan (catches any other global holding the value)
+      try {
+        for (const k of Object.keys(window)) {
+          if (/^on|^HTML|^CSS|^SVG|^Math|^JSON|^performance/.test(k)) continue;
+          const obj = window[k];
+          if (!obj || typeof obj !== 'object') continue;
+          try {
+            const flat = JSON.stringify(obj);
+            if (flat && flat.includes('encryptSystemId')) {
+              const m = flat.match(/"encryptSystemId":"([^"]+)"/);
+              if (m) return m[1];
+            }
+          } catch (_) {}
+        }
+      } catch (_) {}
+      // 5. localStorage — any value containing the key, or key named after it
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && k.toLowerCase().includes('encryptsystemid')) {
+          if (!k) continue;
+          if (k.toLowerCase().includes('encryptsystemid')) {
             const v = localStorage.getItem(k);
             if (v) return v;
+          }
+          const v = localStorage.getItem(k) || '';
+          if (v.includes('encryptSystemId')) {
+            const m = v.match(/"encryptSystemId":"([^"]+)"/);
+            if (m) return m[1];
           }
         }
       } catch (_) {}
       return '';
     })()
   `);
-    if (!result) {
-        throw new Error('geek 聊天页未找到 encryptSystemId（请确认已登录求职端）');
-    }
-    return result;
+    return result || '';
 }
 /**
  * Fetch the job-seeker chat list (brief info, no securityId).
