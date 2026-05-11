@@ -22,9 +22,11 @@ function mapBossMsg(m, friend) {
     };
 }
 
-function mapGeekMsg(m) {
+function mapGeekMsg(m, friend) {
+    const fromUid = m.from && m.from.uid;
+    const isFromBoss = fromUid != null && String(fromUid) === String(friend.uid);
     return {
-        from: m.received ? '对方' : '我',
+        from: isFromBoss ? '对方' : '我',
         type: TYPE_MAP[m.type] || `其他(${m.type})`,
         text: m.text || m.body?.text || m.body?.content || m.body?.showText ||
             JSON.stringify(m.body || {}).slice(0, 120),
@@ -48,7 +50,7 @@ async function geekChatMsg(page, kwargs, encryptSystemId) {
     if (!friend) throw new Error('未找到该聊天（geek 侧）');
     if (!friend.securityId) throw new Error('该聊天缺少 securityId，无法获取历史消息');
     const messages = await fetchGeekHistoryMsg(page, friend, { page: kwargs.page });
-    return messages.map(mapGeekMsg);
+    return messages.map((m) => mapGeekMsg(m, friend));
 }
 
 cli({
@@ -98,6 +100,6 @@ cli({
         if (!geekFriend) throw new Error('uid 在招聘端与求职端聊天列表中均未找到');
         if (!geekFriend.securityId) throw new Error('该聊天缺少 securityId，无法获取历史消息');
         const messages = await fetchGeekHistoryMsg(page, geekFriend, { page: kwargs.page });
-        return messages.map(mapGeekMsg);
+        return messages.map((m) => mapGeekMsg(m, geekFriend));
     },
 });

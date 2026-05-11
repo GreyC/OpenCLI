@@ -27,8 +27,8 @@ const GEEK_FRIEND_ENRICHED = {
     name: 'Boss张',
 };
 const GEEK_MSGS = [
-    { type: 1, text: '欢迎投递', received: true, time: 1704067200000 },
-    { type: 1, text: '谢谢', received: false, time: 1704067201000 },
+    { type: 1, text: '欢迎投递', received: true, time: 1704067200000, from: { uid: 67890, name: 'Boss张' } },
+    { type: 1, text: '谢谢', received: true, time: 1704067201000, from: { uid: 99999, name: '我' } },
 ];
 
 function createPageMock(evaluateImpl) {
@@ -83,7 +83,13 @@ describe('boss chatmsg', () => {
         expect(historyScript).toContain('src=0');
     });
 
-    it('--side geek maps received:true to 对方 and received:false to 我', async () => {
+    it('--side geek uses from.uid to determine direction, not received flag', async () => {
+        // Both messages have received:true (mirrors real geek historyMsg API behaviour)
+        // Direction is determined by whether m.from.uid matches the boss's uid (67890)
+        const msgsAllReceived = [
+            { type: 1, text: '欢迎投递', received: true, time: 1704067200000, from: { uid: 67890, name: 'Boss张' } },
+            { type: 1, text: '谢谢', received: true, time: 1704067201000, from: { uid: 99999, name: '我' } },
+        ];
         const page = createPageMock(async (script) => {
             if (script.includes('document.cookie')) return 'test-enc-sys-id';
             if (script.includes('geekFilterByLabel')) {
@@ -93,12 +99,14 @@ describe('boss chatmsg', () => {
                 return { code: 0, zpData: { result: [GEEK_FRIEND_ENRICHED] } };
             }
             if (script.includes('geek/historyMsg')) {
-                return { code: 0, zpData: { messages: GEEK_MSGS } };
+                return { code: 0, zpData: { messages: msgsAllReceived } };
             }
             return {};
         });
         const rows = await command.func(page, { uid: 'enc-geek-uid', page: 1, side: 'geek' });
+        // from.uid=67890 matches friend.uid=67890 → boss sent it → '对方'
         expect(rows[0].from).toBe('对方');
+        // from.uid=99999 does not match → geek sent it → '我'
         expect(rows[1].from).toBe('我');
     });
 
