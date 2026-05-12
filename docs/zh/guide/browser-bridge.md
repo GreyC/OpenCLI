@@ -46,6 +46,27 @@ opencli browser tab close <targetId>
 - `tab select <targetId>` 会把该 tab 设为后续未显式指定 target 的 `opencli browser ...` 命令默认目标。
 - `tab close <targetId>` 会关闭该 tab；如果它正好是当前默认目标，会一并清掉这条默认绑定。
 
+## Workspace 生命周期
+
+如果你希望多条 `opencli browser` 命令持续操作同一个页面，请使用带前缀的 workspace：
+
+```bash
+opencli browser --workspace browser:my-session open https://example.com
+opencli browser --workspace browser:my-session state
+opencli browser --workspace browser:my-session extract "main"
+```
+
+workspace 前缀决定空闲超时策略：
+
+| Workspace 形式 | 生命周期 | 空闲超时 | 适用场景 |
+|----------------|----------|----------|----------|
+| `browser:<name>` | 交互式 lease | 10 分钟 | 普通多步骤或人工节奏的 browser 操作。 |
+| `operate:<name>` | 交互式 lease | 10 分钟 | 需要承受短暂停顿的 agent 操作。 |
+| `bound:<name>` | 绑定真实 tab | 无 | 用户已经打开并绑定的真实 Chrome tab。 |
+| `<无前缀>` | ephemeral lease | 30 秒 | 只适合短生命周期 adapter 自动化。 |
+
+不要把 `my-session` 这类无前缀自定义 workspace 用在手动多步骤流程里。它空闲 30 秒后可能过期，下一次 `state` 或 `extract` 会新建一个 `about:blank` tab，而不是回到你之前打开的页面。
+
 ## Daemon 生命周期
 
 Daemon 在首次运行浏览器命令时自动启动，之后保持常驻运行。

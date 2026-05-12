@@ -665,7 +665,7 @@ export function createProgram(BUILTIN_CLIS: string, USER_CLIS: string): Command 
 
   const browser = program
     .command('browser')
-    .option('--workspace <name>', 'Browser workspace to use (default: browser:default; bound tabs use bound:<name>)')
+    .option('--workspace <name>', 'Browser workspace. Use browser:<name> for multi-command sessions; bound:<name> for bound tabs; unprefixed names are 30s ephemeral. Default: browser:default')
     .description('Browser control — navigate, click, type, extract, wait (no LLM needed)');
   const originalBrowserDescription = browser.description();
 

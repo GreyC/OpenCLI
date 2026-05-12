@@ -25,9 +25,19 @@ Until `doctor` is green, nothing else will work. Typical failures: Chrome not ru
 ## Lease lifecycle
 
 - `opencli browser *` commands keep an owned tab lease alive between calls. Owned leases share a dedicated automation container and are released with `opencli browser close` or when the idle timeout expires.
+- Use a `browser:<name>` workspace for any multi-command or human-paced browser workflow. Example: `opencli browser --workspace browser:fb-yaya-warmup open https://example.com`, then reuse the same `--workspace browser:fb-yaya-warmup` for `state`, `extract`, `click`, etc. A custom unprefixed workspace such as `fb-yaya-warmup` is ephemeral and can expire after 30 seconds of idle time, so the next command may silently land on a fresh `about:blank` tab.
 - `opencli browser bind` binds a `bound:*` workspace to the Chrome tab you already have open. Use this for logged-in pages, SSO flows, or pages you manually positioned before handing control to the agent.
 - `--focus` (or `OPENCLI_WINDOW_FOCUSED=1`) opens the automation container in the foreground. Use it when you want to watch the page live.
 - `--live` (or `OPENCLI_LIVE=1`) is mainly for browser-backed adapter commands such as `opencli xiaohongshu note ...`. It keeps the adapter's automation lease open after the command returns so you can inspect the final page state.
+
+Workspace prefix rules:
+
+| Workspace form | Lifecycle | Use for |
+|----------------|-----------|---------|
+| `browser:<name>` | interactive lease, 10-minute idle timeout | Normal multi-step browser work. |
+| `operate:<name>` | interactive lease, 10-minute idle timeout | Agent-operated workflows that should survive short pauses. |
+| `bound:<name>` | pinned, no OpenCLI idle timer | A real Chrome tab the user already opened and bound. |
+| `<unprefixed>` | ephemeral lease, 30-second idle timeout | Short adapter automation only; avoid for manual multi-command sessions. |
 
 ### Bind Tab
 
@@ -66,14 +76,15 @@ Navigation is blocked by default on bound workspaces because it can destroy the 
 ## Critical rules
 
 1. **Always inspect before you act.** Run `state` or `find` first. Never hard-code a ref or selector from memory across sessions — indices are per-snapshot.
-2. **Prefer numeric ref over CSS once you have it.** Numeric refs survive mild DOM shifts because the CLI fingerprints each tagged element. A CSS selector written by hand will break the first time the site re-renders.
-3. **Read `match_level` after every write.** `exact` = all good. `stable` = the element is the same but some soft attrs drifted — your action still applied. `reidentified` = the original ref was gone and the CLI found a unique replacement; double-check you hit the right element.
-4. **Use the `compound` field for form controls.** Do not regex-guess a date format, do not `state` twice to get the full `<select>` options list. The compound envelope has the format string, full option list up to 50, `options_total` for overflow, and `accept`/`multiple` for `<input type=file>`.
-5. **Verify writes that matter.** After `type <target> <text>`, run `get value <target>`. After `select`, run `get value`. Autocomplete widgets, React controlled inputs, and masked fields all silently eat characters. The CLI cannot detect this for you.
-6. **`state` → action → `state` after a page change.** Navigations, form submits, and SPA route changes invalidate refs. Take a fresh snapshot. Do not reuse refs from before the transition.
-7. **Chain with `&&`.** A chained sequence runs in one shell so refs acquired by the first command stay live for the second. Separate shell invocations lose the session context you just set up.
-8. **`eval` is read-only.** Wrap the JS in an IIFE and return JSON. If you need to *change* the page, use the structured `click` / `type` / `select` / `keys` commands instead — they produce structured output and fingerprints, `eval` does not.
-9. **Prefer `network` to screen-scraping.** If a page you care about fetches its data from a JSON API, the API is almost always more reliable than scraping the rendered DOM. Capture once, inspect the shape, then `--detail <key>` the body you need.
+2. **Prefer site adapters before raw browser driving.** If `opencli <site> <command>` already covers the task, use that adapter command first (`opencli facebook notifications`, `opencli reddit read`, etc.). Use `opencli browser ...` only for gaps, debugging, or one-off UI flows the adapter does not expose.
+3. **Prefer numeric ref over CSS once you have it.** Numeric refs survive mild DOM shifts because the CLI fingerprints each tagged element. A CSS selector written by hand will break the first time the site re-renders.
+4. **Read `match_level` after every write.** `exact` = all good. `stable` = the element is the same but some soft attrs drifted — your action still applied. `reidentified` = the original ref was gone and the CLI found a unique replacement; double-check you hit the right element.
+5. **Use the `compound` field for form controls.** Do not regex-guess a date format, do not `state` twice to get the full `<select>` options list. The compound envelope has the format string, full option list up to 50, `options_total` for overflow, and `accept`/`multiple` for `<input type=file>`.
+6. **Verify writes that matter.** After `type <target> <text>`, run `get value <target>`. After `select`, run `get value`. Autocomplete widgets, React controlled inputs, and masked fields all silently eat characters. The CLI cannot detect this for you.
+7. **`state` → action → `state` after a page change.** Navigations, form submits, and SPA route changes invalidate refs. Take a fresh snapshot. Do not reuse refs from before the transition.
+8. **Chain with `&&`.** A chained sequence runs in one shell so refs acquired by the first command stay live for the second. Separate shell invocations lose the session context you just set up.
+9. **`eval` is read-only.** Wrap the JS in an IIFE and return JSON. If you need to *change* the page, use the structured `click` / `type` / `select` / `keys` commands instead — they produce structured output and fingerprints, `eval` does not.
+10. **Prefer `network` to screen-scraping.** If a page you care about fetches its data from a JSON API, the API is almost always more reliable than scraping the rendered DOM. Capture once, inspect the shape, then `--detail <key>` the body you need.
 
 ---
 

@@ -48,6 +48,27 @@ Key rules:
 - `tab select <targetId>` makes that tab the default target for later untargeted `opencli browser ...` commands.
 - `tab close <targetId>` removes the tab; if it was the current default target, the stored default is cleared.
 
+## Workspace Lifecycle
+
+Use a prefixed workspace when you want multiple `opencli browser` commands to keep operating on the same page:
+
+```bash
+opencli browser --workspace browser:my-session open https://example.com
+opencli browser --workspace browser:my-session state
+opencli browser --workspace browser:my-session extract "main"
+```
+
+Workspace prefixes determine the idle-timeout policy:
+
+| Workspace form | Lifecycle | Idle timeout | Use for |
+|----------------|-----------|--------------|---------|
+| `browser:<name>` | interactive lease | 10 minutes | Normal multi-command or human-paced browser work. |
+| `operate:<name>` | interactive lease | 10 minutes | Agent-operated workflows that should survive short pauses. |
+| `bound:<name>` | pinned bound tab | none | A real Chrome tab you already opened and bound. |
+| `<unprefixed>` | ephemeral lease | 30 seconds | Short adapter automation only. |
+
+Do not use a custom unprefixed workspace name such as `my-session` for a manual multi-step workflow. After 30 seconds of idle time, its lease can expire; the next `state` or `extract` may create a fresh `about:blank` tab instead of returning to the page you opened.
+
 ## How It Works
 
 ```
