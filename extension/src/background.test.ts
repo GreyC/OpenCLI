@@ -581,7 +581,6 @@ describe('background tab isolation', () => {
         title: 'bilibili',
         url: 'https://www.bilibili.com/',
         timedOut: false,
-        session: 'twitter',
       },
     });
     expect(update).not.toHaveBeenCalled();

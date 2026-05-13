@@ -19378,6 +19378,20 @@
         "default": 2000,
         "required": false,
         "help": "Max characters per comment body (min 100)"
+      },
+      {
+        "name": "expand-more",
+        "type": "bool",
+        "default": false,
+        "required": false,
+        "help": "Follow Reddit \"more comments\" stubs by calling /api/morechildren.json"
+      },
+      {
+        "name": "expand-rounds",
+        "type": "int",
+        "default": 2,
+        "required": false,
+        "help": "Max expansion passes when --expand-more is on (1–5; each round can fan out new \"more\" stubs)"
       }
     ],
     "columns": [
@@ -23176,7 +23190,9 @@
       "retweets",
       "replies",
       "created_at",
-      "url"
+      "url",
+      "has_media",
+      "media_urls"
     ],
     "type": "js",
     "modulePath": "twitter/list-tweets.js",
@@ -23270,7 +23286,9 @@
     "columns": [
       "status",
       "message",
-      "text"
+      "text",
+      "id",
+      "url"
     ],
     "type": "js",
     "modulePath": "twitter/post.js",
@@ -23398,7 +23416,8 @@
     "columns": [
       "status",
       "message",
-      "text"
+      "text",
+      "url"
     ],
     "type": "js",
     "modulePath": "twitter/reply.js",
@@ -23486,7 +23505,7 @@
     "description": "Search Twitter/X for tweets, with optional --from / --has / --exclude / --product filters mapped to X's search operators",
     "access": "read",
     "domain": "x.com",
-    "strategy": "intercept",
+    "strategy": "cookie",
     "browser": true,
     "args": [
       {
@@ -23579,7 +23598,7 @@
     "type": "js",
     "modulePath": "twitter/search.js",
     "sourceFile": "twitter/search.js",
-    "navigateBefore": true,
+    "navigateBefore": "https://x.com",
     "siteSession": "persistent"
   },
   {
@@ -23714,7 +23733,7 @@
   {
     "site": "twitter",
     "name": "tweets",
-    "description": "Fetch a Twitter user's most recent tweets (chronological, excludes pinned)",
+    "description": "Fetch a Twitter user's most recent tweets (chronological, excludes pinned; defaults to the logged-in user when no username is given)",
     "access": "read",
     "domain": "x.com",
     "strategy": "cookie",
@@ -23723,9 +23742,9 @@
       {
         "name": "username",
         "type": "string",
-        "required": true,
+        "required": false,
         "positional": true,
-        "help": "Twitter screen name (with or without @)"
+        "help": "Twitter screen name (with or without @). Defaults to the logged-in user when omitted."
       },
       {
         "name": "limit",
@@ -28223,6 +28242,47 @@
   },
   {
     "site": "zhihu",
+    "name": "answer-detail",
+    "description": "知乎单个回答完整内容（按 answer ID 获取）",
+    "access": "read",
+    "domain": "www.zhihu.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Answer ID, full Zhihu answer URL, or typed target (answer:<qid>:<aid>)"
+      },
+      {
+        "name": "max-content",
+        "type": "int",
+        "default": 0,
+        "required": false,
+        "help": "Optional cap on stripped content length in characters (0 = no truncation, return the full answer)"
+      }
+    ],
+    "columns": [
+      "id",
+      "author",
+      "votes",
+      "comments",
+      "question_id",
+      "question_title",
+      "url",
+      "created_at",
+      "updated_at",
+      "content"
+    ],
+    "type": "js",
+    "modulePath": "zhihu/answer-detail.js",
+    "sourceFile": "zhihu/answer-detail.js",
+    "navigateBefore": "https://www.zhihu.com"
+  },
+  {
+    "site": "zhihu",
     "name": "collection",
     "description": "知乎收藏夹内容列表（需要登录）",
     "access": "read",
@@ -28555,7 +28615,18 @@
         "type": "int",
         "default": 5,
         "required": false,
-        "help": "Number of answers"
+        "help": "Number of answers (max 1000; use normal-sized requests)"
+      },
+      {
+        "name": "sort",
+        "type": "str",
+        "default": "default",
+        "required": false,
+        "help": "Answer order: default or created",
+        "choices": [
+          "default",
+          "created"
+        ]
       }
     ],
     "columns": [
@@ -28567,6 +28638,36 @@
     "type": "js",
     "modulePath": "zhihu/question.js",
     "sourceFile": "zhihu/question.js",
+    "navigateBefore": "https://www.zhihu.com"
+  },
+  {
+    "site": "zhihu",
+    "name": "recommend",
+    "description": "知乎首页推荐",
+    "access": "read",
+    "domain": "www.zhihu.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of items to return (max 1000; use normal-sized requests)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "type",
+      "title",
+      "author",
+      "votes",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "zhihu/recommend.js",
+    "sourceFile": "zhihu/recommend.js",
     "navigateBefore": "https://www.zhihu.com"
   },
   {

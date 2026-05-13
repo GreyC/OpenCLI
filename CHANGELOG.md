@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+* **browser** — `page.evaluate()` / `evaluateInFrame()` now return the user JavaScript value directly. Browser Bridge `exec` previously routed through a shared `pageScopedResult` helper that spread / wrapped the lease's `session` into the result `data`, contaminating arbitrary user returns: array / primitive returns came back as `{ session, data }` envelopes, and plain-object returns had an extra `session` key injected (overwriting any user `session` field). `google search` and `xiaohongshu search` were the visible repro — Chrome rendered results correctly but adapters extracted an empty array. Fixed in extension 1.0.14 by reverting `pageScopedResult` to its pre-1461 form (`{ id, ok, data, page }`); no client-side unwrap is needed.
+* **twitter** — raise fixed cursor-pagination caps in bookmarks / likes / tweets / timeline / bookmark-folder / list-tweets / search / following. The old `i < 5` / `i < 10` literals and following's `Math.ceil(limit / 50) + 2` formula imposed hidden result ceilings below `--limit`; the loop now treats the page count as a high runaway guard while `--limit` and cursor exhaustion control normal pagination.
+* **google/search** — wait for `#rso a h3` before extracting, falling back to the existing fixed wait. On Chrome 148 + Linux Wayland the DOM can settle before SERP anchors are populated, making extraction return empty even with the envelope bug fixed.
+* **xiaohongshu/search** — extract initially visible cards before scrolling, then merge post-scroll rows by URL. Xiaohongshu's virtualized masonry layout can evict the initial cards from the DOM after scroll, so the previous always-scroll-then-extract flow could lose the top results.
+
 ### Features
 
 * **browser** — add `page.evaluate(fn, ...args)` for type-safe browser-context evaluation with JSON-serialized arguments. String evaluation remains supported, but new adapter code should use function form to avoid implicit `wrapForEval` auto-IIFE magic.
@@ -14,6 +21,8 @@
 
 ### Internal
 
+* **runtime** — lower the Node floor to `>=20.0.0`. Three coupled changes: drop all `util.styleText()` usage (added in Node v21.7.0 / v20.12.0; previously crashed v21.0–v21.6 at module load), downgrade `undici` from `^8.0.2` (engines `>=22.19.0`) to `^6.25.0` (engines `>=18.17`, retains `Agent` / `EnvHttpProxyAgent` / `fetch`), and lower `MIN_SUPPORTED_NODE_MAJOR` from 21 to 20 so the startup guard matches the declared `engines.node`. Smoke-tested on v20.0.0 / v21.2.0 / v22.22.2. The colored output (`[OK]` / `[WARN]` / `[FAIL]` / `ℹ` / `⚠` / `✖`) keeps its semantic markers; ANSI colors were redundant for the primarily agent-facing CLI.
+* **extension 1.0.14** — `pageScopedResult` no longer injects `session` into `data`. The field had no consumers and contaminated `exec` results with arbitrary user-JS shapes; routing-relevant identity is already exposed via `Result.page`.
 * **extension 1.0.13** — remove the internal command-session lease-key backdoor.
 
 ## [1.7.18](https://github.com/jackwener/opencli/compare/v1.7.17...v1.7.18) (2026-05-12)
