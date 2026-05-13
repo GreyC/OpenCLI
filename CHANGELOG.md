@@ -1,12 +1,101 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+* **browser** — add `page.evaluate(fn, ...args)` for type-safe browser-context evaluation with JSON-serialized arguments. String evaluation remains supported, but new adapter code should use function form to avoid implicit `wrapForEval` auto-IIFE magic.
+
+### ⚠ BREAKING CHANGES
+
+* **browser** — replace the `--session <name>` flag with a `<session>` positional argument that immediately follows `browser`. `opencli browser work click 12` instead of `opencli browser --session work click 12`; `opencli browser work bind` instead of `opencli browser bind --session work`. Required-flag semantics are now encoded structurally as a positional, matching the Docker/git convention for required operation-target identifiers. The internal `--session` flag is preserved for the daemon protocol and for direct `program.parseAsync` callers but is no longer part of the user-facing surface.
+* **env** — remove `OPENCLI_KEEP_TAB`. The flag was a debugging shortcut, not a config dimension: `--keep-tab true|false` on the command line is the single source of truth, and adapter `siteSession: 'persistent'` already pins persistent site tabs as a hard constraint. Removing the env eliminates a globally-leaking process state that overrode every browser command in the shell.
+* **extension** — remove the internal `surface\\0session` command-session backdoor. Browser Bridge commands now route only through structured `session` + `surface` fields; lease-key strings remain an extension-internal registry detail.
+
+### Internal
+
+* **extension 1.0.13** — remove the internal command-session lease-key backdoor.
+
+## [1.7.18](https://github.com/jackwener/opencli/compare/v1.7.17...v1.7.18) (2026-05-12)
+
+Hotfix release for the 1.7.17 doctor regression: `opencli doctor` failed connectivity probe with `Browser session is required` because the doctor probe didn't pass a session to the new strict-session browser bridge. Also adds new adapters and adapter fixes that were ready immediately after 1.7.17.
+
+### Bug Fixes
+
+* **doctor** — pass an internal `__doctor__` browser session to the live connectivity probe so `opencli doctor` works again under the explicit-session browser model introduced in 1.7.17. ([#1485](https://github.com/jackwener/opencli/issues/1485))
+* **browser** — `--session <name>` is now declared as a `requiredOption` so Commander itself rejects calls missing the flag before runtime, and the help line is marked `(required)` instead of being hidden under `Options:`. ([#1485](https://github.com/jackwener/opencli/issues/1485))
+* **doubao/ask** — restore Assistant detection after the 2026-05 DOM refactor. ([#1484](https://github.com/jackwener/opencli/issues/1484))
+* **youtube** — request `srv3` format for caption URLs. ([#1422](https://github.com/jackwener/opencli/issues/1422))
+
+### Features
+
+* **rednote** — add `rednote.com` adapter mirroring xiaohongshu read commands. ([#1475](https://github.com/jackwener/opencli/issues/1475))
+* **reddit** — add `reply` command for replying to comments. ([#1428](https://github.com/jackwener/opencli/issues/1428))
+
+## [1.7.17](https://github.com/jackwener/opencli/compare/v1.7.16...v1.7.17) (2026-05-12)
+
+Extension bumped to 1.0.12 (workspace → session lease routing, drop `handleSessions` handler). Major simplification pass: browser/adapter session model rewrite, `--workspace` removed, doctor surface trimmed to its core job.
+
+### ⚠ BREAKING CHANGES
+
+* **browser session model** — replace the browser-facing `--workspace` model with explicit `--session <name>` on `opencli browser *`. Browser commands now require a session name, `browser bind`/`unbind` use `--session`, and bind no longer accepts `--domain`, `--path-prefix`, or `--allow-navigate-bound`. Browser primitives keep their session tab by design; the browser namespace no longer exposes `--keep-tab`. ([#1461](https://github.com/jackwener/opencli/issues/1461))
+* **adapter site sessions** — replace adapter metadata `browserSession: { reuse: 'site' }` with `siteSession: 'persistent'`, and replace the user override `--reuse <none|site>` / `OPENCLI_BROWSER_REUSE` with `--site-session <ephemeral|persistent>`. Persistent site sessions keep a stable site tab open without idle expiry. ([#1462](https://github.com/jackwener/opencli/issues/1462))
+* **doctor** — remove `--no-live` and `--sessions` flags from `opencli doctor`. Doctor always runs the live browser connectivity probe (that's its core job); session enumeration was never part of health diagnosis. The underlying `'sessions'` daemon protocol action and the `BrowserSessionInfo` public type are removed as dead code. ([#1470](https://github.com/jackwener/opencli/issues/1470))
+
+### Features
+
+* **chatgpt** — `ask` and `send` now accept local image paths and upload them through the composer before submitting the prompt. ([#1476](https://github.com/jackwener/opencli/issues/1476))
+
+### Internal
+
+* **extension 1.0.12** — drop `handleSessions` action handler (no remaining consumers after doctor cleanup).
+* **extension 1.0.11** — switch Browser Bridge lease routing from user-facing workspaces to explicit browser sessions.
+
+## [1.7.16](https://github.com/jackwener/opencli/compare/v1.7.15...v1.7.16) (2026-05-11)
+
+Extension bumped to 1.0.10 (rename adapter-owned tab group `OpenCLI Automation` → `OpenCLI Adapter`). Performance and stability sweep across browser-backed adapters; new external CLI integrations (tg-cli, discord-cli, wx-cli).
+
+### Features
+
+* **openreview** — add `author` command for ID-explicit publication lookup. ([#1365](https://github.com/jackwener/opencli/issues/1365))
+* **external** — register `tg-cli`, `discord-cli`, and `wx-cli` as external CLI integrations. ([#1458](https://github.com/jackwener/opencli/issues/1458))
+
+### Bug Fixes
+
+* **xiaohongshu** — fall back to base64 upload when CDP `DOM.setFileInputFiles` returns `Not allowed` on creator center. ([#1374](https://github.com/jackwener/opencli/issues/1374))
+* **chatgpt** — switch to locale-stable send button selector so non-English UIs don't break send. ([#1354](https://github.com/jackwener/opencli/issues/1354))
+
+### Performance
+
+* **adapters** — hoist cookie reads to `page.getCookies` across Tier 1 (25 files), eliminating per-call CDP round trips. ([#1450](https://github.com/jackwener/opencli/issues/1450))
+* **twitter** — drop redundant `goto + wait` in adapter steps; framework auto pre-navigates. ([#1451](https://github.com/jackwener/opencli/issues/1451))
+* **twitter** — enable `browserSession.reuse: 'site'` on 17 read-only adapters so repeated reads share one tab. ([#1454](https://github.com/jackwener/opencli/issues/1454))
+* **reddit** — opt 13 browser-backed adapters into shared site-tab lease. ([#1455](https://github.com/jackwener/opencli/issues/1455))
+* **claude** — replace fixed-sleep waits with selector-based readiness on streaming flows. ([#1452](https://github.com/jackwener/opencli/issues/1452))
+* **deepseek** — replace fixed-sleep waits with selector-based readiness on streaming flows. ([#1449](https://github.com/jackwener/opencli/issues/1449))
+* **chatgpt** — replace fixed-sleep waits with selector-based readiness (D3). ([#1456](https://github.com/jackwener/opencli/issues/1456))
+
+### Refactor
+
+* **browser** — split interactive and automation windows so `opencli browser *` and adapter-driven background commands no longer share one Chrome window; tab groups are isolated by role.
+
+### Internal
+
+* **extension 1.0.10** — rename the adapter-owned Chrome tab group from `OpenCLI Automation` to `OpenCLI Adapter`. ([#1457](https://github.com/jackwener/opencli/issues/1457))
+* **docs** — list `tg-cli`, `discord-cli`, `wx-cli` in External CLI README sections. ([#1459](https://github.com/jackwener/opencli/issues/1459))
+
 ## [1.7.15](https://github.com/jackwener/opencli/compare/v1.7.14...v1.7.15) (2026-05-10)
 
 Extension bumped to 1.0.9 (Accessibility.enable allowlist + downloads permission + cross-origin frame target attach for AX). Major Browser Agent Runtime release: full Phase 0/1/2 alignment with `vercel-labs/agent-browser` model — CDP-primary input, AX snapshot/refs with stale recovery, semantic locators across all primitives, full form toolbelt (hover/focus/dblclick/check/uncheck/upload/drag/wait-download), annotated screenshots, and same-origin iframe AX routing. Cross-origin OOPIF AX is best-effort (Chrome extension API limitation).
 
+### ⚠ BREAKING CHANGES
+
+* **browser lifecycle** — replace `--focus` / `OPENCLI_WINDOW_FOCUSED` with `--window foreground|background` / `OPENCLI_WINDOW`, and replace `--live` / `OPENCLI_LIVE` with `--keep-tab true|false` / `OPENCLI_KEEP_TAB`. `opencli browser *` defaults to a foreground window and keeps its tab; browser-backed adapter commands default to a background automation window and release their tab unless the adapter uses site-level reuse.
+
 ### Features
 
 * **help / browser** — `opencli browser --help -f yaml|json` now emits a structured, agent-ready index of all browser leaf commands (including nested `tab`, `get`, and `dialog` commands), their positionals, command options, namespace options, and root global options. Individual browser commands also support structured help, backed by a shared Commander option/argument spec extractor.
+* **help / built-in namespaces** — `opencli daemon|plugin|adapter|profile --help -f yaml|json` now emit the same structured payload as `browser`. One agent call returns every leaf's positionals, options, descriptions, and global options — no per-leaf `--help` follow-ups needed. Original namespace descriptions are preserved through `applyRootSubcommandSummaries()` via a snapshot at namespace declaration time.
 * **browser state** — add opt-in AX snapshot refs via `browser state --source ax`, including backend-node click resolution and role/name stale-ref recovery for the Phase 0 browser-agent runtime prototype.
 * **browser state** — AX snapshots now include same-origin iframe refs, and `browser state --compare-sources` prints DOM-vs-AX observation metrics for the Phase 1 default-source decision without dumping page contents.
 * **browser locators** — `browser find`, `browser click`, and `browser get text|value|attributes` now accept semantic locator flags (`--role`, `--name`, `--label`, `--text`, `--testid`) so agents can act on common controls without a separate state-ref lookup.

@@ -205,8 +205,15 @@ function createFollowingPage(followingResponses, { ct0 = 'token', userLookup = {
     const page = {
         goto: vi.fn().mockResolvedValue(undefined),
         wait: vi.fn().mockResolvedValue(undefined),
-        evaluate: vi.fn(async (script) => {
-            if (script.includes('document.cookie')) return ct0;
+        getCookies: vi.fn(async () => (ct0 ? [{ name: 'ct0', value: ct0 }] : [])),
+        evaluate: vi.fn(async (script, ...args) => {
+            if (typeof script === 'function') {
+                const haystack = [script.toString(), ...args.map((arg) => String(arg))].join('\n');
+                if (haystack.includes('/UserByScreenName')) return userLookup;
+                if (haystack.includes('/Following')) return followingResponses.shift() || followingPayload([], null);
+                if (haystack.includes('AppTabBar_Profile_Link')) return '/viewer';
+                throw new Error(`Unexpected evaluate function: ${haystack.slice(0, 80)}`);
+            }
             if (script.includes('operationName')) return null;
             if (script.includes('/UserByScreenName')) return userLookup;
             if (script.includes('/Following')) return followingResponses.shift() || followingPayload([], null);
@@ -228,12 +235,14 @@ describe('twitter following command', () => {
         const rows = await command.func(page, { user: '@elonmusk', limit: 3 });
 
         expect(rows.map((row) => row.screen_name)).toEqual(['alice', 'bob', 'carol']);
-        const userLookupScript = page.evaluate.mock.calls.find(([script]) => script.includes('/UserByScreenName'))?.[0] || '';
+        expect(page.getCookies).toHaveBeenCalledWith({ url: 'https://x.com' });
+        const callText = (call) => call.map((part) => typeof part === 'function' ? part.toString() : String(part)).join('\n');
+        const userLookupScript = callText(page.evaluate.mock.calls.find((call) => callText(call).includes('/UserByScreenName')) || []);
         expect(decodeURIComponent(userLookupScript)).toContain('"screen_name":"elonmusk"');
         expect(decodeURIComponent(userLookupScript)).not.toContain('"screen_name":"@elonmusk"');
-        const followingCalls = page.evaluate.mock.calls.filter(([script]) => script.includes('/Following'));
+        const followingCalls = page.evaluate.mock.calls.filter((call) => callText(call).includes('/Following'));
         expect(followingCalls).toHaveLength(2);
-        expect(decodeURIComponent(followingCalls[1][0])).toContain('"cursor":"cursor-1"');
+        expect(decodeURIComponent(callText(followingCalls[1]))).toContain('"cursor":"cursor-1"');
     });
 
     it('rejects invalid limits before navigating', async () => {

@@ -4186,9 +4186,7 @@
     "modulePath": "chatgpt/ask.js",
     "sourceFile": "chatgpt/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4223,9 +4221,7 @@
     "modulePath": "chatgpt/detail.js",
     "sourceFile": "chatgpt/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4254,9 +4250,7 @@
     "modulePath": "chatgpt/history.js",
     "sourceFile": "chatgpt/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4273,6 +4267,12 @@
         "required": true,
         "positional": true,
         "help": "Image prompt to send to ChatGPT"
+      },
+      {
+        "name": "image",
+        "type": "str",
+        "required": false,
+        "help": "Local image path to attach before prompting; comma-separated paths are supported"
       },
       {
         "name": "op",
@@ -4305,9 +4305,7 @@
     "modulePath": "chatgpt/image.js",
     "sourceFile": "chatgpt/image.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4325,9 +4323,7 @@
     "modulePath": "chatgpt/new.js",
     "sourceFile": "chatgpt/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4355,9 +4351,7 @@
     "modulePath": "chatgpt/read.js",
     "sourceFile": "chatgpt/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4391,9 +4385,7 @@
     "modulePath": "chatgpt/send.js",
     "sourceFile": "chatgpt/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt",
@@ -4413,9 +4405,7 @@
     "modulePath": "chatgpt/status.js",
     "sourceFile": "chatgpt/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "chatgpt-app",
@@ -4850,9 +4840,7 @@
     "modulePath": "claude/ask.js",
     "sourceFile": "claude/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -4880,9 +4868,7 @@
     "modulePath": "claude/detail.js",
     "sourceFile": "claude/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -4911,9 +4897,7 @@
     "modulePath": "claude/history.js",
     "sourceFile": "claude/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -4931,9 +4915,7 @@
     "modulePath": "claude/new.js",
     "sourceFile": "claude/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -4953,9 +4935,7 @@
     "modulePath": "claude/read.js",
     "sourceFile": "claude/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -4990,9 +4970,7 @@
     "modulePath": "claude/send.js",
     "sourceFile": "claude/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "claude",
@@ -5012,9 +4990,7 @@
     "modulePath": "claude/status.js",
     "sourceFile": "claude/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "cnki",
@@ -5894,6 +5870,122 @@
   },
   {
     "site": "ctrip",
+    "name": "flight",
+    "description": "搜索携程一程机票（按出发/到达 IATA 三字码 + 日期）",
+    "access": "read",
+    "domain": "flights.ctrip.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "from",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Departure IATA code (e.g. BJS / PEK)"
+      },
+      {
+        "name": "to",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Arrival IATA code (e.g. SHA / PVG)"
+      },
+      {
+        "name": "date",
+        "type": "str",
+        "required": true,
+        "help": "Departure date (YYYY-MM-DD)"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of flights (1-50)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "airline",
+      "flightNo",
+      "aircraft",
+      "departureTime",
+      "departureAirport",
+      "arrivalTime",
+      "arrivalAirport",
+      "terminal",
+      "price",
+      "currency",
+      "cabin",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "ctrip/flight.js",
+    "sourceFile": "ctrip/flight.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "ctrip",
+    "name": "hotel-search",
+    "description": "搜索携程酒店列表（按城市 + 入住/离店日期）",
+    "access": "read",
+    "domain": "hotels.ctrip.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "city",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Numeric Ctrip city ID (use `ctrip search` or `ctrip hotel-suggest` to discover)"
+      },
+      {
+        "name": "checkin",
+        "type": "str",
+        "required": true,
+        "help": "Check-in date (YYYY-MM-DD)"
+      },
+      {
+        "name": "checkout",
+        "type": "str",
+        "required": true,
+        "help": "Check-out date (YYYY-MM-DD)"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 10,
+        "required": false,
+        "help": "Number of hotels (1-30); SSR first page returns ~13 entries"
+      }
+    ],
+    "columns": [
+      "rank",
+      "hotelId",
+      "name",
+      "enName",
+      "star",
+      "score",
+      "scoreLabel",
+      "reviewCount",
+      "cityName",
+      "district",
+      "address",
+      "lat",
+      "lon",
+      "price",
+      "currency",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "ctrip/hotel-search.js",
+    "sourceFile": "ctrip/hotel-search.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "ctrip",
     "name": "hotel-suggest",
     "description": "搜索携程酒店上下文联想：城市、商圈、单酒店匹配",
     "access": "read",
@@ -6471,9 +6563,7 @@
     "modulePath": "deepseek/ask.js",
     "sourceFile": "deepseek/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6500,9 +6590,7 @@
     "modulePath": "deepseek/detail.js",
     "sourceFile": "deepseek/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6530,9 +6618,7 @@
     "modulePath": "deepseek/history.js",
     "sourceFile": "deepseek/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6550,9 +6636,7 @@
     "modulePath": "deepseek/new.js",
     "sourceFile": "deepseek/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6571,9 +6655,7 @@
     "modulePath": "deepseek/read.js",
     "sourceFile": "deepseek/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6614,9 +6696,7 @@
     "modulePath": "deepseek/send.js",
     "sourceFile": "deepseek/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "deepseek",
@@ -6636,9 +6716,7 @@
     "modulePath": "deepseek/status.js",
     "sourceFile": "deepseek/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "defillama",
@@ -7729,9 +7807,7 @@
     "modulePath": "doubao/ask.js",
     "sourceFile": "doubao/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7758,9 +7834,7 @@
     "modulePath": "doubao/detail.js",
     "sourceFile": "doubao/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7789,9 +7863,7 @@
     "modulePath": "doubao/history.js",
     "sourceFile": "doubao/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7825,9 +7897,7 @@
     "modulePath": "doubao/meeting-summary.js",
     "sourceFile": "doubao/meeting-summary.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7861,9 +7931,7 @@
     "modulePath": "doubao/meeting-transcript.js",
     "sourceFile": "doubao/meeting-transcript.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7882,9 +7950,7 @@
     "modulePath": "doubao/new.js",
     "sourceFile": "doubao/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7903,9 +7969,7 @@
     "modulePath": "doubao/read.js",
     "sourceFile": "doubao/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7933,9 +7997,7 @@
     "modulePath": "doubao/send.js",
     "sourceFile": "doubao/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao",
@@ -7956,9 +8018,7 @@
     "modulePath": "doubao/status.js",
     "sourceFile": "doubao/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "doubao-app",
@@ -9738,9 +9798,7 @@
     "modulePath": "gemini/ask.js",
     "sourceFile": "gemini/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "gemini",
@@ -9787,9 +9845,7 @@
     "modulePath": "gemini/deep-research.js",
     "sourceFile": "gemini/deep-research.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "gemini",
@@ -9834,9 +9890,7 @@
     "modulePath": "gemini/deep-research-result.js",
     "sourceFile": "gemini/deep-research-result.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "gemini",
@@ -9900,9 +9954,7 @@
     "modulePath": "gemini/image.js",
     "sourceFile": "gemini/image.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "gemini",
@@ -9921,9 +9973,7 @@
     "modulePath": "gemini/new.js",
     "sourceFile": "gemini/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "gitee",
@@ -10520,9 +10570,7 @@
     "modulePath": "grok/ask.js",
     "sourceFile": "grok/ask.js",
     "navigateBefore": "https://grok.com",
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10556,9 +10604,7 @@
     "modulePath": "grok/detail.js",
     "sourceFile": "grok/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10586,9 +10632,7 @@
     "modulePath": "grok/history.js",
     "sourceFile": "grok/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10645,9 +10689,7 @@
     "modulePath": "grok/image.js",
     "sourceFile": "grok/image.js",
     "navigateBefore": "https://grok.com",
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10665,9 +10707,7 @@
     "modulePath": "grok/new.js",
     "sourceFile": "grok/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10694,9 +10734,7 @@
     "modulePath": "grok/read.js",
     "sourceFile": "grok/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10730,9 +10768,7 @@
     "modulePath": "grok/send.js",
     "sourceFile": "grok/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "grok",
@@ -10754,9 +10790,7 @@
     "modulePath": "grok/status.js",
     "sourceFile": "grok/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "hackernews",
@@ -15562,7 +15596,7 @@
     "aliases": [
       "select"
     ],
-    "description": "Open one NotebookLM notebook in the automation workspace by id or URL",
+    "description": "Open one NotebookLM notebook in the adapter session by id or URL",
     "access": "read",
     "domain": "notebooklm.google.com",
     "strategy": "cookie",
@@ -17209,6 +17243,43 @@
   },
   {
     "site": "openreview",
+    "name": "author",
+    "description": "List OpenReview submissions by an author profile id (newest first)",
+    "access": "read",
+    "domain": "openreview.net",
+    "strategy": "public",
+    "browser": false,
+    "args": [
+      {
+        "name": "profile",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "OpenReview profile id (e.g. \"~Yoshua_Bengio1\"). Find it on the author profile URL on openreview.net."
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 50,
+        "required": false,
+        "help": "Max submissions (1-1000)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "id",
+      "title",
+      "authors",
+      "venue",
+      "pdate",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "openreview/author.js",
+    "sourceFile": "openreview/author.js"
+  },
+  {
+    "site": "openreview",
     "name": "paper",
     "description": "Show full metadata for a single OpenReview paper",
     "access": "read",
@@ -18852,9 +18923,7 @@
     "modulePath": "qwen/ask.js",
     "sourceFile": "qwen/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -18888,9 +18957,7 @@
     "modulePath": "qwen/detail.js",
     "sourceFile": "qwen/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -18919,9 +18986,7 @@
     "modulePath": "qwen/history.js",
     "sourceFile": "qwen/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -18978,9 +19043,7 @@
     "modulePath": "qwen/image.js",
     "sourceFile": "qwen/image.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -18998,9 +19061,7 @@
     "modulePath": "qwen/new.js",
     "sourceFile": "qwen/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -19027,9 +19088,7 @@
     "modulePath": "qwen/read.js",
     "sourceFile": "qwen/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -19077,9 +19136,7 @@
     "modulePath": "qwen/send.js",
     "sourceFile": "qwen/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "qwen",
@@ -19101,9 +19158,7 @@
     "modulePath": "qwen/status.js",
     "sourceFile": "qwen/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19136,7 +19191,8 @@
     "type": "js",
     "modulePath": "reddit/comment.js",
     "sourceFile": "reddit/comment.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19166,7 +19222,41 @@
     "type": "js",
     "modulePath": "reddit/frontpage.js",
     "sourceFile": "reddit/frontpage.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
+  },
+  {
+    "site": "reddit",
+    "name": "home",
+    "description": "Reddit personalized home feed (Best, requires login)",
+    "access": "read",
+    "domain": "reddit.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 25,
+        "required": false,
+        "help": "Number of posts (1–100)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "subreddit",
+      "score",
+      "comments",
+      "postId",
+      "author",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "reddit/home.js",
+    "sourceFile": "reddit/home.js",
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19235,7 +19325,8 @@
     "type": "js",
     "modulePath": "reddit/popular.js",
     "sourceFile": "reddit/popular.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19298,6 +19389,40 @@
     "type": "js",
     "modulePath": "reddit/read.js",
     "sourceFile": "reddit/read.js",
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
+  },
+  {
+    "site": "reddit",
+    "name": "reply",
+    "description": "Reply to a Reddit comment",
+    "access": "write",
+    "domain": "reddit.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "comment-id",
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "help": "Comment ID (e.g. okf3s7u) or fullname (t1_xxx)"
+      },
+      {
+        "name": "text",
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "help": "Reply text"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ],
+    "type": "js",
+    "modulePath": "reddit/reply.js",
+    "sourceFile": "reddit/reply.js",
     "navigateBefore": "https://reddit.com"
   },
   {
@@ -19331,7 +19456,8 @@
     "type": "js",
     "modulePath": "reddit/save.js",
     "sourceFile": "reddit/save.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19360,7 +19486,8 @@
     "type": "js",
     "modulePath": "reddit/saved.js",
     "sourceFile": "reddit/saved.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19418,7 +19545,8 @@
     "type": "js",
     "modulePath": "reddit/search.js",
     "sourceFile": "reddit/search.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19468,7 +19596,35 @@
     "type": "js",
     "modulePath": "reddit/subreddit.js",
     "sourceFile": "reddit/subreddit.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
+  },
+  {
+    "site": "reddit",
+    "name": "subreddit-info",
+    "description": "Show metadata for a Reddit subreddit (subscribers, description, created date, NSFW)",
+    "access": "read",
+    "domain": "reddit.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "help": "Subreddit name (no `r/` prefix needed)"
+      }
+    ],
+    "columns": [
+      "field",
+      "value"
+    ],
+    "type": "js",
+    "modulePath": "reddit/subreddit-info.js",
+    "sourceFile": "reddit/subreddit-info.js",
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19501,7 +19657,8 @@
     "type": "js",
     "modulePath": "reddit/subscribe.js",
     "sourceFile": "reddit/subscribe.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19534,7 +19691,8 @@
     "type": "js",
     "modulePath": "reddit/upvote.js",
     "sourceFile": "reddit/upvote.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19563,7 +19721,8 @@
     "type": "js",
     "modulePath": "reddit/upvoted.js",
     "sourceFile": "reddit/upvoted.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19589,7 +19748,8 @@
     "type": "js",
     "modulePath": "reddit/user.js",
     "sourceFile": "reddit/user.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19624,7 +19784,8 @@
     "type": "js",
     "modulePath": "reddit/user-comments.js",
     "sourceFile": "reddit/user-comments.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
   },
   {
     "site": "reddit",
@@ -19660,7 +19821,274 @@
     "type": "js",
     "modulePath": "reddit/user-posts.js",
     "sourceFile": "reddit/user-posts.js",
-    "navigateBefore": "https://reddit.com"
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
+  },
+  {
+    "site": "reddit",
+    "name": "whoami",
+    "description": "Show the currently logged-in Reddit user",
+    "access": "read",
+    "domain": "reddit.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [],
+    "columns": [
+      "field",
+      "value"
+    ],
+    "type": "js",
+    "modulePath": "reddit/whoami.js",
+    "sourceFile": "reddit/whoami.js",
+    "navigateBefore": "https://reddit.com",
+    "siteSession": "persistent"
+  },
+  {
+    "site": "rednote",
+    "name": "comments",
+    "description": "Read comments from a rednote note (supports nested replies)",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "note-id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Full rednote note URL with xsec_token"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of top-level comments (max 50)"
+      },
+      {
+        "name": "with-replies",
+        "type": "boolean",
+        "default": false,
+        "required": false,
+        "help": "Include nested replies (楼中楼)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "author",
+      "text",
+      "likes",
+      "time",
+      "is_reply",
+      "reply_to"
+    ],
+    "type": "js",
+    "modulePath": "rednote/comments.js",
+    "sourceFile": "rednote/comments.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "download",
+    "description": "Download images and videos from a rednote note",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "note-id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Full rednote note URL with xsec_token"
+      },
+      {
+        "name": "output",
+        "type": "str",
+        "default": "./rednote-downloads",
+        "required": false,
+        "help": "Output directory"
+      }
+    ],
+    "columns": [
+      "index",
+      "type",
+      "status",
+      "size"
+    ],
+    "type": "js",
+    "modulePath": "rednote/download.js",
+    "sourceFile": "rednote/download.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "feed",
+    "description": "Rednote home feed (reads hydrated Pinia store)",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of items to return"
+      }
+    ],
+    "columns": [
+      "id",
+      "title",
+      "author",
+      "likes",
+      "type",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "rednote/feed.js",
+    "sourceFile": "rednote/feed.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "note",
+    "description": "Read note body and engagement counts from a rednote note",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "note-id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Full rednote note URL with xsec_token"
+      }
+    ],
+    "columns": [
+      "field",
+      "value"
+    ],
+    "type": "js",
+    "modulePath": "rednote/note.js",
+    "sourceFile": "rednote/note.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "notifications",
+    "description": "Rednote notifications (mentions/likes/connections)",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "type",
+        "type": "str",
+        "default": "mentions",
+        "required": false,
+        "help": "Notification type: mentions, likes, or connections"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of notifications to return"
+      }
+    ],
+    "columns": [
+      "rank",
+      "user",
+      "action",
+      "content",
+      "note",
+      "time"
+    ],
+    "type": "js",
+    "modulePath": "rednote/notifications.js",
+    "sourceFile": "rednote/notifications.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "search",
+    "description": "Search rednote notes",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "query",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Search keyword"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 20,
+        "required": false,
+        "help": "Number of results"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "likes",
+      "published_at",
+      "url",
+      "author_url"
+    ],
+    "type": "js",
+    "modulePath": "rednote/search.js",
+    "sourceFile": "rednote/search.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "rednote",
+    "name": "user",
+    "description": "Get public notes from a rednote user profile",
+    "access": "read",
+    "domain": "www.rednote.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "User id or profile URL"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 15,
+        "required": false,
+        "help": "Number of notes to return"
+      }
+    ],
+    "columns": [
+      "id",
+      "title",
+      "type",
+      "likes",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "rednote/user.js",
+    "sourceFile": "rednote/user.js",
+    "navigateBefore": false
   },
   {
     "site": "rest-countries",
@@ -22201,7 +22629,8 @@
     "type": "js",
     "modulePath": "twitter/article.js",
     "sourceFile": "twitter/article.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22299,7 +22728,8 @@
     "type": "js",
     "modulePath": "twitter/bookmark-folder.js",
     "sourceFile": "twitter/bookmark-folder.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22319,7 +22749,8 @@
     "type": "js",
     "modulePath": "twitter/bookmark-folders.js",
     "sourceFile": "twitter/bookmark-folders.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22358,7 +22789,8 @@
     "type": "js",
     "modulePath": "twitter/bookmarks.js",
     "sourceFile": "twitter/bookmarks.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22432,7 +22864,8 @@
     "type": "js",
     "modulePath": "twitter/download.js",
     "sourceFile": "twitter/download.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22492,7 +22925,8 @@
     "type": "js",
     "modulePath": "twitter/followers.js",
     "sourceFile": "twitter/followers.js",
-    "navigateBefore": true
+    "navigateBefore": true,
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22527,7 +22961,8 @@
     "type": "js",
     "modulePath": "twitter/following.js",
     "sourceFile": "twitter/following.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22627,7 +23062,8 @@
     "type": "js",
     "modulePath": "twitter/likes.js",
     "sourceFile": "twitter/likes.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22745,7 +23181,8 @@
     "type": "js",
     "modulePath": "twitter/list-tweets.js",
     "sourceFile": "twitter/list-tweets.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22774,7 +23211,8 @@
     "type": "js",
     "modulePath": "twitter/lists.js",
     "sourceFile": "twitter/lists.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22803,7 +23241,8 @@
     "type": "js",
     "modulePath": "twitter/notifications.js",
     "sourceFile": "twitter/notifications.js",
-    "navigateBefore": true
+    "navigateBefore": true,
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -22871,7 +23310,8 @@
     "type": "js",
     "modulePath": "twitter/profile.js",
     "sourceFile": "twitter/profile.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -23139,7 +23579,8 @@
     "type": "js",
     "modulePath": "twitter/search.js",
     "sourceFile": "twitter/search.js",
-    "navigateBefore": true
+    "navigateBefore": true,
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -23185,7 +23626,8 @@
     "type": "js",
     "modulePath": "twitter/thread.js",
     "sourceFile": "twitter/thread.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -23238,7 +23680,8 @@
     "type": "js",
     "modulePath": "twitter/timeline.js",
     "sourceFile": "twitter/timeline.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -23265,7 +23708,8 @@
     "type": "js",
     "modulePath": "twitter/trending.js",
     "sourceFile": "twitter/trending.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -23315,7 +23759,8 @@
     "type": "js",
     "modulePath": "twitter/tweets.js",
     "sourceFile": "twitter/tweets.js",
-    "navigateBefore": "https://x.com"
+    "navigateBefore": "https://x.com",
+    "siteSession": "persistent"
   },
   {
     "site": "twitter",
@@ -27570,9 +28015,7 @@
     "modulePath": "yuanbao/ask.js",
     "sourceFile": "yuanbao/ask.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27599,9 +28042,7 @@
     "modulePath": "yuanbao/detail.js",
     "sourceFile": "yuanbao/detail.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27631,9 +28072,7 @@
     "modulePath": "yuanbao/history.js",
     "sourceFile": "yuanbao/history.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27652,9 +28091,7 @@
     "modulePath": "yuanbao/new.js",
     "sourceFile": "yuanbao/new.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27673,9 +28110,7 @@
     "modulePath": "yuanbao/read.js",
     "sourceFile": "yuanbao/read.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27709,9 +28144,7 @@
     "modulePath": "yuanbao/send.js",
     "sourceFile": "yuanbao/send.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "yuanbao",
@@ -27735,9 +28168,7 @@
     "modulePath": "yuanbao/status.js",
     "sourceFile": "yuanbao/status.js",
     "navigateBefore": false,
-    "browserSession": {
-      "reuse": "site"
-    }
+    "siteSession": "persistent"
   },
   {
     "site": "zhihu",

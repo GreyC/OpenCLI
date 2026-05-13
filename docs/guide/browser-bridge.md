@@ -27,47 +27,44 @@ opencli doctor            # Check extension + daemon connectivity
 
 ## Tab Targeting
 
-Browser commands run inside the shared `browser:default` workspace unless you explicitly choose another tab target.
+Browser commands require an explicit `<session>` positional immediately after `browser`. Use the same session name for a multi-step flow, and use different names to isolate parallel work.
 
 ```bash
-opencli browser open https://www.baidu.com/
-opencli browser tab list
-opencli browser tab new https://www.baidu.com/
-opencli browser eval --tab <targetId> 'document.title'
-opencli browser tab select <targetId>
-opencli browser get title
-opencli browser tab close <targetId>
+opencli browser baidu open https://www.baidu.com/
+opencli browser baidu tab list
+opencli browser baidu tab new https://www.baidu.com/
+opencli browser baidu eval --tab <targetId> 'document.title'
+opencli browser baidu tab select <targetId>
+opencli browser baidu get title
+opencli browser baidu tab close <targetId>
 ```
 
 Key rules:
 
-- `opencli browser open <url>` and `opencli browser tab new [url]` return a `targetId`.
-- `opencli browser tab list` prints the `targetId` values of tabs that already exist.
+- `opencli browser <session> open <url>` and `opencli browser <session> tab new [url]` return a `targetId`.
+- `opencli browser <session> tab list` prints the `targetId` values of tabs that already exist.
 - `--tab <targetId>` routes a single browser command to that specific tab.
 - `tab new` creates a new tab but does not change the default browser target.
 - `tab select <targetId>` makes that tab the default target for later untargeted `opencli browser ...` commands.
 - `tab close <targetId>` removes the tab; if it was the current default target, the stored default is cleared.
 
-## Workspace Lifecycle
+## Session Lifecycle
 
-Use a prefixed workspace when you want multiple `opencli browser` commands to keep operating on the same page:
+Use a stable session name when you want multiple `opencli browser` commands to keep operating on the same page:
 
 ```bash
-opencli browser --workspace browser:my-session open https://example.com
-opencli browser --workspace browser:my-session state
-opencli browser --workspace browser:my-session extract "main"
+opencli browser my-session open https://example.com
+opencli browser my-session state
+opencli browser my-session extract "main"
 ```
 
-Workspace prefixes determine the idle-timeout policy:
+Browser sessions use an interactive tab lease with a 10-minute idle timeout. Release it explicitly when done:
 
-| Workspace form | Lifecycle | Idle timeout | Use for |
-|----------------|-----------|--------------|---------|
-| `browser:<name>` | interactive lease | 10 minutes | Normal multi-command or human-paced browser work. |
-| `operate:<name>` | interactive lease | 10 minutes | Agent-operated workflows that should survive short pauses. |
-| `bound:<name>` | pinned bound tab | none | A real Chrome tab you already opened and bound. |
-| `<unprefixed>` | ephemeral lease | 30 seconds | Short adapter automation only. |
+```bash
+opencli browser my-session close
+```
 
-Do not use a custom unprefixed workspace name such as `my-session` for a manual multi-step workflow. After 30 seconds of idle time, its lease can expire; the next `state` or `extract` may create a fresh `about:blank` tab instead of returning to the page you opened.
+Use `opencli browser <session> bind` when you want to attach OpenCLI to a Chrome tab you already opened manually. Bound sessions stay attached until `unbind`, tab close, window close, or daemon restart. Use `--window foreground` to watch OpenCLI work in a visible window, or `--window background` to keep the automation window out of the way.
 
 ## How It Works
 

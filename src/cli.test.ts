@@ -371,20 +371,27 @@ describe('createProgram root help descriptions', () => {
       const browser = program.commands.find(cmd => cmd.name() === 'browser');
       expect(browser).toBeTruthy();
 
-      process.argv = ['node', 'opencli', 'browser', '--help', '-f', 'yaml'];
+      process.argv = ['node', 'opencli', 'browser', '--session', 'test', '--help', '-f', 'yaml'];
       const data = yaml.load(browser!.helpInformation()) as any;
 
       expect(data.namespace).toBe('browser');
       expect(data.command).toBe('opencli browser');
       expect(data.description).toBe('Browser control — navigate, click, type, extract, wait (no LLM needed)');
       expect(data.command_count).toBeGreaterThan(20);
-      expect(data.namespace_options).toMatchObject([
-        {
-          name: 'workspace',
-          flags: '--workspace <name>',
+      // `--session` is now a hidden internal option; user-facing surface is the
+      // <session> positional declared via `.usage()`. Structured help drops
+      // hidden options, so namespace_options shouldn't expose it.
+      expect(data.namespace_options).not.toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'session' }),
+      ]));
+      expect(data.namespace_options).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          name: 'window',
+          flags: '--window <mode>',
           takes_value: 'required',
-        },
-      ]);
+        }),
+      ]));
+      expect(data.usage).toBe('opencli browser <session> <command> [options]');
       expect(data.global_options).toEqual(expect.arrayContaining([
         expect.objectContaining({
           name: 'version',
@@ -398,23 +405,26 @@ describe('createProgram root help descriptions', () => {
       ]));
 
       const click = data.commands.find((cmd: any) => cmd.name === 'click');
+      // Structured help command/usage paths include the <session> positional so
+      // agents construct the correct full invocation. `name` is the leaf
+      // identifier (placeholder positionals are stripped).
       expect(click).toMatchObject({
-        command: 'opencli browser click',
-        usage: 'opencli browser click [target] [options]',
+        command: 'opencli browser <session> click',
+        usage: 'opencli browser <session> click [target] [options]',
         positionals: [{ name: 'target' }],
       });
       expect(click.command_options.map((option: any) => option.name)).toEqual(['role', 'name', 'label', 'text', 'testid', 'nth', 'tab']);
 
       const tabList = data.commands.find((cmd: any) => cmd.name === 'tab list');
       expect(tabList).toMatchObject({
-        command: 'opencli browser tab list',
-        usage: 'opencli browser tab list [options]',
+        command: 'opencli browser <session> tab list',
+        usage: 'opencli browser <session> tab list [options]',
         command_options: [],
       });
 
       const getText = data.commands.find((cmd: any) => cmd.name === 'get text');
       expect(getText).toMatchObject({
-        command: 'opencli browser get text',
+        command: 'opencli browser <session> get text',
         positionals: [{ name: 'target' }],
       });
       expect(data.structured_help).toMatchObject({
@@ -434,14 +444,14 @@ describe('createProgram root help descriptions', () => {
       const tab = browser.commands.find(cmd => cmd.name() === 'tab');
       expect(tab).toBeTruthy();
 
-      process.argv = ['node', 'opencli', 'browser', 'tab', '--help', '-f', 'yaml'];
+      process.argv = ['node', 'opencli', 'browser', '--session', 'test', 'tab', '--help', '-f', 'yaml'];
       const data = yaml.load(tab!.helpInformation()) as any;
 
       expect(data).toMatchObject({
         namespace: 'browser',
         group: 'tab',
-        command: 'opencli browser tab',
-        usage: 'opencli browser tab <command> [args] [options]',
+        command: 'opencli browser <session> tab',
+        usage: 'opencli browser <session> tab <command> [args] [options]',
         command_count: 4,
       });
       expect(data.commands.map((cmd: any) => cmd.name)).toEqual([
@@ -451,13 +461,15 @@ describe('createProgram root help descriptions', () => {
         'tab select',
       ]);
       expect(data.commands.find((cmd: any) => cmd.name === 'tab close')).toMatchObject({
-        command: 'opencli browser tab close',
-        usage: 'opencli browser tab close [targetId] [options]',
+        command: 'opencli browser <session> tab close',
+        usage: 'opencli browser <session> tab close [targetId] [options]',
         positionals: [{ name: 'targetId', help: 'Target tab/page identity returned by "browser open", "browser tab new", or "browser tab list"' }],
       });
-      expect(data.namespace_options.map((option: any) => option.name)).toEqual(['workspace']);
+      // session is now a hidden internal option (consumed from the <session> positional).
+      // namespace_options should only list user-facing options.
+      expect(data.namespace_options.map((option: any) => option.name)).toEqual(['window']);
       expect(data.structured_help).toMatchObject({
-        usage: 'opencli browser tab --help -f yaml',
+        usage: 'opencli browser <session> tab --help -f yaml',
       });
     } finally {
       process.argv = argv;
@@ -472,22 +484,131 @@ describe('createProgram root help descriptions', () => {
       const click = browser.commands.find(cmd => cmd.name() === 'click');
       expect(click).toBeTruthy();
 
-      process.argv = ['node', 'opencli', 'browser', 'click', '--help', '-f', 'yaml'];
+      process.argv = ['node', 'opencli', 'browser', '--session', 'test', 'click', '--help', '-f', 'yaml'];
       const data = yaml.load(click!.helpInformation()) as any;
 
       expect(data).toMatchObject({
         namespace: 'browser',
         name: 'click',
-        command: 'opencli browser click',
-        usage: 'opencli browser click [target] [options]',
+        command: 'opencli browser <session> click',
+        usage: 'opencli browser <session> click [target] [options]',
         positionals: [{ name: 'target' }],
         structured_help: {
-          usage: 'opencli browser click --help -f yaml',
+          usage: 'opencli browser <session> click --help -f yaml',
         },
       });
       expect(data.command_options.map((option: any) => option.name)).toEqual(['role', 'name', 'label', 'text', 'testid', 'nth', 'tab']);
-      expect(data.namespace_options.map((option: any) => option.name)).toEqual(['workspace']);
+      // session is hidden; only `window` surfaces as a namespace option.
+      expect(data.namespace_options.map((option: any) => option.name)).toEqual(['window']);
       expect(data.global_options.map((option: any) => option.name)).toContain('profile');
+    } finally {
+      process.argv = argv;
+    }
+  });
+
+  it('renders daemon namespace structured help with leaves and global options', () => {
+    const argv = process.argv;
+    try {
+      const program = createProgram('', '');
+      const daemon = program.commands.find(cmd => cmd.name() === 'daemon')!;
+      expect(daemon).toBeTruthy();
+
+      process.argv = ['node', 'opencli', 'daemon', '--help', '-f', 'yaml'];
+      const data = yaml.load(daemon.helpInformation()) as any;
+
+      expect(data).toMatchObject({
+        namespace: 'daemon',
+        command: 'opencli daemon',
+        usage: 'opencli daemon <command> [args] [options]',
+        description: 'Manage the opencli daemon',
+        command_count: 3,
+        namespace_options: [],
+        structured_help: { usage: 'opencli daemon --help -f yaml' },
+      });
+      expect(data.commands.map((cmd: any) => cmd.name)).toEqual(['restart', 'status', 'stop']);
+      expect(data.global_options.map((option: any) => option.name)).toEqual(expect.arrayContaining(['version', 'profile']));
+    } finally {
+      process.argv = argv;
+    }
+  });
+
+  it('renders plugin namespace structured help with positional + option leaves', () => {
+    const argv = process.argv;
+    try {
+      const program = createProgram('', '');
+      const plugin = program.commands.find(cmd => cmd.name() === 'plugin')!;
+      expect(plugin).toBeTruthy();
+
+      process.argv = ['node', 'opencli', 'plugin', '--help', '-f', 'yaml'];
+      const data = yaml.load(plugin.helpInformation()) as any;
+
+      expect(data).toMatchObject({
+        namespace: 'plugin',
+        command: 'opencli plugin',
+        description: 'Manage opencli plugins',
+        namespace_options: [],
+      });
+      expect(data.commands.map((cmd: any) => cmd.name)).toEqual(['create', 'install', 'list', 'uninstall', 'update']);
+      const update = data.commands.find((cmd: any) => cmd.name === 'update');
+      expect(update).toMatchObject({
+        usage: 'opencli plugin update [name] [options]',
+        positionals: [{ name: 'name' }],
+      });
+      expect(update.command_options.map((option: any) => option.name)).toEqual(['all']);
+    } finally {
+      process.argv = argv;
+    }
+  });
+
+  it('renders adapter namespace structured help preserving original description after applyRootSubcommandSummaries', () => {
+    const argv = process.argv;
+    try {
+      const program = createProgram('', '');
+      const adapter = program.commands.find(cmd => cmd.name() === 'adapter')!;
+      expect(adapter).toBeTruthy();
+
+      process.argv = ['node', 'opencli', 'adapter', '--help', '-f', 'yaml'];
+      const data = yaml.load(adapter.helpInformation()) as any;
+
+      // applyRootSubcommandSummaries() rewrites .description() to a child-name listing;
+      // structured help must surface the original product description via the snapshot.
+      expect(data.description).toBe('Manage CLI adapters');
+      expect(data.commands.map((cmd: any) => cmd.name)).toEqual(['eject', 'reset', 'status']);
+      const reset = data.commands.find((cmd: any) => cmd.name === 'reset');
+      expect(reset).toMatchObject({
+        usage: 'opencli adapter reset [site] [options]',
+        positionals: [{ name: 'site' }],
+      });
+      expect(reset.command_options.map((option: any) => option.name)).toEqual(['all']);
+    } finally {
+      process.argv = argv;
+    }
+  });
+
+  it('renders profile namespace structured help including required positionals', () => {
+    const argv = process.argv;
+    try {
+      const program = createProgram('', '');
+      const profile = program.commands.find(cmd => cmd.name() === 'profile')!;
+      expect(profile).toBeTruthy();
+
+      process.argv = ['node', 'opencli', 'profile', '--help', '-f', 'yaml'];
+      const data = yaml.load(profile.helpInformation()) as any;
+
+      expect(data).toMatchObject({
+        namespace: 'profile',
+        description: 'Manage Browser Bridge Chrome profiles',
+        command_count: 3,
+      });
+      expect(data.commands.map((cmd: any) => cmd.name)).toEqual(['list', 'rename', 'use']);
+      const rename = data.commands.find((cmd: any) => cmd.name === 'rename');
+      expect(rename).toMatchObject({
+        usage: 'opencli profile rename <contextId> <alias> [options]',
+        positionals: [
+          { name: 'contextId', required: true },
+          { name: 'alias', required: true },
+        ],
+      });
     } finally {
       process.argv = argv;
     }
@@ -603,7 +724,7 @@ describe('browser verify', () => {
       fs.writeFileSync(path.join(adapterDir, 'top.js'), 'export default {};\n', 'utf-8');
 
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'verify', 'hn/top', '--no-fixture', '--trace', 'retain-on-failure']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'verify', 'hn/top', '--no-fixture', '--trace', 'retain-on-failure']);
 
       expect(mockExecFileSync).toHaveBeenCalledTimes(1);
       const [, execArgs] = mockExecFileSync.mock.calls[0] as [string, string[]];
@@ -630,7 +751,7 @@ describe('browser verify', () => {
       fs.writeFileSync(path.join(adapterDir, 'top.js'), 'export default {};\n', 'utf-8');
 
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'verify', 'hn/top', '--no-fixture', '--seed-args', 'opencli-verify']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'verify', 'hn/top', '--no-fixture', '--seed-args', 'opencli-verify']);
 
       expect(mockExecFileSync).toHaveBeenCalledTimes(1);
       const [, execArgs] = mockExecFileSync.mock.calls[0] as [string, string[]];
@@ -658,7 +779,7 @@ describe('browser verify', () => {
       fs.writeFileSync(path.join(adapterDir, 'top.js'), 'export default {};\n', 'utf-8');
 
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'verify', 'hn/top', '--write-fixture', '--seed-args', 'opencli-verify']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'verify', 'hn/top', '--write-fixture', '--seed-args', 'opencli-verify']);
 
       const fixtureFile = path.join(fakeHome, '.opencli', 'sites', 'hn', 'verify', 'top.json');
       const fixture = JSON.parse(fs.readFileSync(fixtureFile, 'utf-8'));
@@ -689,7 +810,7 @@ describe('browser verify', () => {
       fs.writeFileSync(path.join(adapterDir, 'top.js'), 'export default {};\n', 'utf-8');
 
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'verify', 'hn/top', '--no-fixture']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'verify', 'hn/top', '--no-fixture']);
 
       expect(process.exitCode).toBe(1);
       const output = consoleLogSpy.mock.calls.map((args) => args.join(' ')).join('\n');
@@ -769,8 +890,8 @@ describe('browser tab targeting commands', () => {
   const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-  function getBrowserStateFile(cacheDir: string): string {
-    return path.join(cacheDir, 'browser-state', 'browser_default.json');
+  function getBrowserStateFile(cacheDir: string, session: string = 'test'): string {
+    return path.join(cacheDir, 'browser-state', `${session}.json`);
   }
 
   beforeEach(() => {
@@ -780,8 +901,9 @@ describe('browser tab targeting commands', () => {
     stderrSpy.mockClear();
     mockBrowserConnect.mockClear();
     mockBrowserClose.mockReset().mockResolvedValue(undefined);
+    delete process.env.OPENCLI_WINDOW;
     mockBindTab.mockReset().mockResolvedValue({
-      workspace: 'bound:default',
+      session: 'test',
       page: 'tab-2',
       url: 'https://user.example/inbox',
       title: 'Inbox',
@@ -813,6 +935,7 @@ describe('browser tab targeting commands', () => {
       screenshot: vi.fn().mockResolvedValue('base64-shot'),
       annotatedScreenshot: vi.fn().mockResolvedValue('annotated-base64-shot'),
       readNetworkCapture: vi.fn().mockResolvedValue([]),
+      closeWindow: vi.fn().mockResolvedValue(undefined),
       waitForDownload: vi.fn().mockResolvedValue({
         downloaded: true,
         filename: '/tmp/receipt.pdf',
@@ -820,6 +943,7 @@ describe('browser tab targeting commands', () => {
         state: 'complete',
         elapsedMs: 10,
       }),
+      session: 'test',
     } as unknown as IPage;
   });
 
@@ -831,46 +955,52 @@ describe('browser tab targeting commands', () => {
     return JSON.parse(last);
   }
 
-  it('binds the current Chrome tab into a bound workspace', async () => {
+  it('binds the current Chrome tab into a browser session', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'bind', '--domain', 'user.example', '--path-prefix', '/inbox']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'bind']);
 
-    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, workspace: 'bound:default' });
-    expect(mockBindTab).toHaveBeenCalledWith('bound:default', {
-      matchDomain: 'user.example',
-      matchPathPrefix: '/inbox',
-    });
+    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, session: 'test', surface: 'browser' });
+    expect(mockBindTab).toHaveBeenCalledWith('test', {});
     const out = lastJsonLog();
-    expect(out.workspace).toBe('bound:default');
+    expect(out.session).toBe('test');
     expect(out.url).toBe('https://user.example/inbox');
   });
 
-  it('rejects bind workspaces outside the bound namespace', async () => {
+  it('requires an explicit session for browser commands', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'bind', '--workspace', 'browser:default']);
+    // --session is now a hidden internal flag; commander no longer guards it.
+    // The action body throws via getBrowserSession(), surfacing the
+    // <session> positional in the error message.
+    await program.parseAsync(['node', 'opencli', 'browser', 'state']);
 
     expect(mockBrowserConnect).not.toHaveBeenCalled();
-    expect(mockBindTab).not.toHaveBeenCalled();
-    const out = lastJsonLog();
-    expect(out.error.code).toBe('invalid_bind_workspace');
-    expect(process.exitCode).toBeDefined();
+    expect(stderrSpy.mock.calls.flat().join('')).toContain('<session> is a required positional argument');
   });
 
-  it('runs browser commands against an explicit bound workspace', async () => {
+  it('runs browser commands against an explicit session', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', '--workspace', 'bound:default', 'state']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'state']);
 
-    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, workspace: 'bound:default' });
+    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, session: 'test', surface: 'browser', windowMode: 'foreground' });
+    expect(browserState.page?.snapshot).toHaveBeenCalled();
+  });
+
+  it('passes browser --window through Commander options without relying on env pre-processing', async () => {
+    const program = createProgram('', '');
+
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', '--window', 'background', 'state']);
+
+    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, session: 'test', surface: 'browser', windowMode: 'background' });
     expect(browserState.page?.snapshot).toHaveBeenCalled();
   });
 
   it('passes the opt-in AX source to browser state', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'state', '--source', 'ax']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'state', '--source', 'ax']);
 
     expect(browserState.page?.snapshot).toHaveBeenCalledWith({ viewportExpand: 2000, source: 'ax' });
   });
@@ -887,7 +1017,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'state', '--compare-sources']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'state', '--compare-sources']);
 
     expect(browserState.page?.snapshot).toHaveBeenCalledWith({ viewportExpand: 2000, source: 'dom' });
     expect(browserState.page?.snapshot).toHaveBeenCalledWith({ viewportExpand: 2000, source: 'ax' });
@@ -907,7 +1037,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'state', '--compare-sources']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'state', '--compare-sources']);
 
     const out = lastJsonLog();
     expect(out.sources.dom).toMatchObject({ ok: true, refs: 1 });
@@ -920,7 +1050,7 @@ describe('browser tab targeting commands', () => {
   it('rejects unknown browser state sources before touching the page', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'state', '--source', 'magic']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'state', '--source', 'magic']);
 
     expect(browserState.page?.snapshot).not.toHaveBeenCalled();
     const out = lastJsonLog();
@@ -931,7 +1061,7 @@ describe('browser tab targeting commands', () => {
   it('captures annotated screenshots through the visual ref overlay path', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'screenshot', '--annotate']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'screenshot', '--annotate']);
 
     expect(browserState.page?.annotatedScreenshot).toHaveBeenCalledWith({
       fullPage: false,
@@ -944,42 +1074,40 @@ describe('browser tab targeting commands', () => {
     expect(consoleLogSpy).toHaveBeenLastCalledWith('annotated-base64-shot');
   });
 
-  it('blocks history navigation on bound workspaces unless explicitly allowed', async () => {
+  it('allows history navigation in a bound session', async () => {
     browserState.page = {
       ...browserState.page,
-      workspace: 'bound:default',
       evaluate: vi.fn(),
       wait: vi.fn(),
+      session: 'test',
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', '--workspace', 'bound:default', 'back']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'back']);
 
-    expect(browserState.page?.evaluate).not.toHaveBeenCalled();
-    const out = lastJsonLog();
-    expect(out.error.code).toBe('bound_navigation_blocked');
+    expect(browserState.page?.evaluate).toHaveBeenCalledWith('history.back()');
   });
 
-  it('unbinds a bound workspace through the daemon close-window command', async () => {
+  it('unbinds a session through the daemon close-window command', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'unbind', '--workspace', 'bound:default']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'unbind']);
 
-    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, workspace: 'bound:default' });
-    expect(mockSendCommand).toHaveBeenCalledWith('close-window', { workspace: 'bound:default' });
+    expect(mockBrowserConnect).toHaveBeenCalledWith({ timeout: 30, session: 'test', surface: 'browser' });
+    expect(mockSendCommand).toHaveBeenCalledWith('close-window', { session: 'test', surface: 'browser' });
     const out = lastJsonLog();
-    expect(out).toEqual({ unbound: true, workspace: 'bound:default' });
+    expect(out).toEqual({ unbound: true, session: 'test' });
   });
 
   it('does not print false success when unbind fails', async () => {
     mockSendCommand.mockRejectedValueOnce(new BrowserCommandError(
-      'Workspace "bound:default" is not attached to a tab.',
+      'Session "test" is not attached to a tab.',
       'bound_session_missing',
       'Run bind again, then retry the browser command.',
     ));
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'unbind', '--workspace', 'bound:default']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'unbind']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('bound_session_missing');
@@ -989,7 +1117,7 @@ describe('browser tab targeting commands', () => {
   it('accepts JavaScript dialogs through the browser dialog command', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'dialog', 'accept', '--text', 'ok']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'dialog', 'accept', '--text', 'ok']);
 
     expect(browserState.page?.handleJavaScriptDialog).toHaveBeenCalledWith(true, 'ok');
     const out = lastJsonLog();
@@ -1003,7 +1131,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', 'document.title']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('javascript_dialog_open');
@@ -1014,7 +1142,7 @@ describe('browser tab targeting commands', () => {
   it('binds browser commands to an explicit target tab via --tab', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', '--tab', 'tab-2', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', '--tab', 'tab-2', 'document.title']);
 
     expect(browserState.page?.setActivePage).toHaveBeenCalledWith('tab-2');
     expect(browserState.page?.evaluate).toHaveBeenCalledWith('document.title');
@@ -1029,7 +1157,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', '--tab', 'tab-stale', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', '--tab', 'tab-stale', 'document.title']);
 
     expect(process.exitCode).toBeDefined();
     expect(browserState.page?.setActivePage).not.toHaveBeenCalled();
@@ -1040,7 +1168,7 @@ describe('browser tab targeting commands', () => {
   it('lists tabs with target IDs via browser tab list', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'list']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'list']);
 
     expect(browserState.page?.tabs).toHaveBeenCalledTimes(1);
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('"page": "tab-1"');
@@ -1050,7 +1178,7 @@ describe('browser tab targeting commands', () => {
   it('creates a new tab and prints its target ID', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'new', 'https://three.example']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'new', 'https://three.example']);
 
     expect(browserState.page?.newTab).toHaveBeenCalledWith('https://three.example');
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('"page": "tab-3"');
@@ -1059,7 +1187,7 @@ describe('browser tab targeting commands', () => {
   it('prints the resolved target ID when browser open creates or navigates a tab', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'open', 'https://example.com']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'open', 'https://example.com']);
 
     expect(browserState.page?.goto).toHaveBeenCalledWith('https://example.com');
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('"url": "https://one.example"');
@@ -1069,7 +1197,7 @@ describe('browser tab targeting commands', () => {
   it('lists cross-origin frames via browser frames', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'frames']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'frames']);
 
     expect(browserState.page?.frames).toHaveBeenCalledTimes(1);
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('"frameId": "frame-1"');
@@ -1079,7 +1207,7 @@ describe('browser tab targeting commands', () => {
   it('routes browser eval --frame through frame-targeted evaluation', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', '--frame', '0', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', '--frame', '0', 'document.title']);
 
     expect(browserState.page?.evaluateInFrame).toHaveBeenCalledWith('document.title', 0);
     expect(browserState.page?.evaluate).not.toHaveBeenCalled();
@@ -1089,8 +1217,8 @@ describe('browser tab targeting commands', () => {
   it('does not promote a newly created tab to the persisted default target', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'new', 'https://three.example']);
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'new', 'https://three.example']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', 'document.title']);
 
     expect(browserState.page?.newTab).toHaveBeenCalledWith('https://three.example');
     expect(browserState.page?.setActivePage).not.toHaveBeenCalled();
@@ -1100,8 +1228,8 @@ describe('browser tab targeting commands', () => {
   it('persists an explicitly selected tab as the default target for later untargeted commands', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'select', 'tab-2']);
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'select', 'tab-2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', 'document.title']);
 
     expect(browserState.page?.selectTab).toHaveBeenCalledWith('tab-2');
     expect(browserState.page?.setActivePage).toHaveBeenCalledWith('tab-2');
@@ -1113,7 +1241,7 @@ describe('browser tab targeting commands', () => {
     const cacheDir = String(process.env.OPENCLI_CACHE_DIR);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'select', 'tab-2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'select', 'tab-2']);
     expect(fs.existsSync(getBrowserStateFile(cacheDir))).toBe(true);
 
     browserState.page = {
@@ -1124,7 +1252,7 @@ describe('browser tab targeting commands', () => {
       readNetworkCapture: vi.fn().mockResolvedValue([]),
     } as unknown as IPage;
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', 'document.title']);
 
     expect(browserState.page?.setActivePage).not.toHaveBeenCalled();
     expect(browserState.page?.evaluate).toHaveBeenCalledWith('document.title');
@@ -1134,12 +1262,12 @@ describe('browser tab targeting commands', () => {
   it('clears the persisted default target when that tab is closed', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'select', 'tab-2']);
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'close', 'tab-2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'select', 'tab-2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'close', 'tab-2']);
     vi.mocked(browserState.page?.setActivePage as any).mockClear();
     vi.mocked(browserState.page?.evaluate as any).mockClear();
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'eval', 'document.title']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'eval', 'document.title']);
 
     expect(browserState.page?.closeTab).toHaveBeenCalledWith('tab-2');
     expect(browserState.page?.setActivePage).not.toHaveBeenCalled();
@@ -1149,7 +1277,7 @@ describe('browser tab targeting commands', () => {
   it('closes a tab by target ID', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'close', 'tab-2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'close', 'tab-2']);
 
     expect(browserState.page?.closeTab).toHaveBeenCalledWith('tab-2');
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('"closed": "tab-2"');
@@ -1157,12 +1285,13 @@ describe('browser tab targeting commands', () => {
 
   it('rejects closing a stale tab target ID that is no longer in the current session', async () => {
     browserState.page = {
+      session: 'test',
       tabs: vi.fn().mockResolvedValue([]),
       closeTab: vi.fn(),
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'tab', 'close', 'tab-stale']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'tab', 'close', 'tab-stale']);
 
     expect(process.exitCode).toBeDefined();
     expect(browserState.page?.closeTab).not.toHaveBeenCalled();
@@ -1212,7 +1341,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'analyze', 'https://target.example/']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'analyze', 'https://target.example/']);
 
     const out = lastJsonLog();
     expect(browserState.page?.readNetworkCapture).toHaveBeenCalledTimes(2);
@@ -1276,7 +1405,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'analyze', 'https://target.example/']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'analyze', 'https://target.example/']);
 
     const out = lastJsonLog();
     expect(browserState.page?.readNetworkCapture).toHaveBeenCalledTimes(2);
@@ -1318,7 +1447,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'wait', 'xhr', '/api/target', '--timeout', '900']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'wait', 'xhr', '/api/target', '--timeout', '900']);
 
     const out = lastJsonLog();
     expect(browserState.page?.startNetworkCapture).toHaveBeenCalledTimes(1);
@@ -1369,7 +1498,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'wait', 'xhr', '/api/target', '--timeout', '900']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'wait', 'xhr', '/api/target', '--timeout', '900']);
 
     const out = lastJsonLog();
     expect(browserState.page?.startNetworkCapture).toHaveBeenCalledTimes(1);
@@ -1396,7 +1525,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'wait', 'download', 'receipt', '--timeout', '900']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'wait', 'download', 'receipt', '--timeout', '900']);
 
     expect(browserState.page?.waitForDownload).toHaveBeenCalledWith('receipt', 900);
     expect(lastJsonLog()).toEqual({
@@ -1425,7 +1554,7 @@ describe('browser tab targeting commands', () => {
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'wait', 'download', 'receipt', '--timeout', '900']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'wait', 'download', 'receipt', '--timeout', '900']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('download_not_seen');
@@ -1438,11 +1567,11 @@ describe('browser network command', () => {
   const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
   function getNetworkCachePath(cacheDir: string): string {
-    return path.join(cacheDir, 'browser-network', 'browser_default.json');
+    return path.join(cacheDir, 'browser-network', 'test.json');
   }
 
-  function getBoundNetworkCachePath(cacheDir: string): string {
-    return path.join(cacheDir, 'browser-network', 'bound_default.json');
+  function getCustomNetworkCachePath(cacheDir: string): string {
+    return path.join(cacheDir, 'browser-network', 'custom.json');
   }
 
   function lastJsonLog(): any {
@@ -1461,6 +1590,7 @@ describe('browser network command', () => {
     mockBrowserClose.mockReset().mockResolvedValue(undefined);
 
     browserState.page = {
+      session: 'test',
       setActivePage: vi.fn(),
       getActivePage: vi.fn().mockReturnValue('tab-1'),
       tabs: vi.fn().mockResolvedValue([{ page: 'tab-1', active: true }]),
@@ -1489,7 +1619,7 @@ describe('browser network command', () => {
     const cacheDir = String(process.env.OPENCLI_CACHE_DIR);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
 
     const out = lastJsonLog();
     expect(out.count).toBe(1);
@@ -1500,26 +1630,26 @@ describe('browser network command', () => {
     expect(fs.existsSync(getNetworkCachePath(cacheDir))).toBe(true);
   });
 
-  it('uses the selected browser workspace for network cache scope', async () => {
+  it('uses the selected browser session for network cache scope', async () => {
     const cacheDir = String(process.env.OPENCLI_CACHE_DIR);
     browserState.page = {
       ...browserState.page,
-      workspace: 'bound:default',
+      session: 'custom',
     } as unknown as IPage;
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', '--workspace', 'bound:default', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'custom', 'network']);
 
     const out = lastJsonLog();
-    expect(out.workspace).toBe('bound:default');
-    expect(fs.existsSync(getBoundNetworkCachePath(cacheDir))).toBe(true);
+    expect(out.session).toBe('custom');
+    expect(fs.existsSync(getCustomNetworkCachePath(cacheDir))).toBe(true);
     expect(fs.existsSync(getNetworkCachePath(cacheDir))).toBe(false);
   });
 
   it('--all includes static resources that the default filter drops', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--all']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--all']);
 
     const out = lastJsonLog();
     expect(out.count).toBe(2);
@@ -1557,7 +1687,7 @@ describe('browser network command', () => {
     ]);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--since', '120s', '--failed']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--since', '120s', '--failed']);
 
     const out = lastJsonLog();
     expect(out.count).toBe(1);
@@ -1584,7 +1714,7 @@ describe('browser network command', () => {
     ]);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
 
     const out = lastJsonLog();
     expect(out.count).toBe(1);
@@ -1597,7 +1727,7 @@ describe('browser network command', () => {
   it('--raw emits full bodies inline for every entry', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--raw']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--raw']);
 
     const out = lastJsonLog();
     expect(out.entries[0].body).toEqual({ data: { user: { rest_id: '42' } } });
@@ -1607,9 +1737,9 @@ describe('browser network command', () => {
   it('--detail <key> returns the full body for the requested entry', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
     consoleLogSpy.mockClear();
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--detail', 'UserTweets']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--detail', 'UserTweets']);
 
     const out = lastJsonLog();
     expect(out.key).toBe('UserTweets');
@@ -1621,9 +1751,9 @@ describe('browser network command', () => {
   it('--detail reports key_not_found with the list of available keys', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
     consoleLogSpy.mockClear();
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--detail', 'NopeOp']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--detail', 'NopeOp']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('key_not_found');
@@ -1634,7 +1764,7 @@ describe('browser network command', () => {
   it('--detail reports cache_missing when no capture has been persisted yet', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network', '--detail', 'UserTweets']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--detail', 'UserTweets']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('cache_missing');
@@ -1645,7 +1775,7 @@ describe('browser network command', () => {
     (browserState.page!.readNetworkCapture as any) = vi.fn().mockRejectedValue(new Error('CDP disconnected'));
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
 
     const out = lastJsonLog();
     expect(out.error.code).toBe('capture_failed');
@@ -1661,7 +1791,7 @@ describe('browser network command', () => {
     fs.writeFileSync(clashDir, 'not-a-directory');
 
     const program = createProgram('', '');
-    await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
 
     const out = lastJsonLog();
     expect(out.cache_warning).toMatch(/Could not persist capture cache/);
@@ -1699,7 +1829,7 @@ describe('browser network command', () => {
 
     it('narrows entries to those whose shape has ALL named fields', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'author,text,likes']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'author,text,likes']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(1);
@@ -1710,7 +1840,7 @@ describe('browser network command', () => {
 
     it('matches container segments too, not just leaf names (any-segment rule)', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'data,items']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'data,items']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(1);
@@ -1719,7 +1849,7 @@ describe('browser network command', () => {
 
     it('drops entries that are missing any required field (AND semantics)', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'author,followers']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'author,followers']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(0);
@@ -1730,7 +1860,7 @@ describe('browser network command', () => {
 
     it('returns empty entries (not an error) when nothing matches', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'nonexistent_field']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'nonexistent_field']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(0);
@@ -1741,7 +1871,7 @@ describe('browser network command', () => {
 
     it('is case-sensitive so agents do not conflate `Id` with `id`', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'Data']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'Data']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(0);
@@ -1749,9 +1879,9 @@ describe('browser network command', () => {
 
     it('persists the full (unfiltered) capture so --detail lookups still find filtered-out keys', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'author,text,likes']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'author,text,likes']);
       consoleLogSpy.mockClear();
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--detail', 'UserProfile']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--detail', 'UserProfile']);
 
       const out = lastJsonLog();
       expect(out.key).toBe('UserProfile');
@@ -1760,7 +1890,7 @@ describe('browser network command', () => {
 
     it('composes with --raw: entries keep full bodies, filter still narrows', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'author', '--raw']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'author', '--raw']);
 
       const out = lastJsonLog();
       expect(out.count).toBe(1);
@@ -1769,7 +1899,7 @@ describe('browser network command', () => {
 
     it('reports invalid_filter for empty value', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', '']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', '']);
 
       const out = lastJsonLog();
       expect(out.error.code).toBe('invalid_filter');
@@ -1778,7 +1908,7 @@ describe('browser network command', () => {
 
     it('reports invalid_filter for commas-only value', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', ',,,']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', ',,,']);
 
       const out = lastJsonLog();
       expect(out.error.code).toBe('invalid_filter');
@@ -1787,7 +1917,7 @@ describe('browser network command', () => {
 
     it('rejects --filter combined with --detail as invalid_args', async () => {
       const program = createProgram('', '');
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--filter', 'author', '--detail', 'UserTweets']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--filter', 'author', '--detail', 'UserTweets']);
 
       const out = lastJsonLog();
       expect(out.error.code).toBe('invalid_args');
@@ -1812,7 +1942,7 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
 
       const out = lastJsonLog();
       expect(out.body_truncated_count).toBe(1);
@@ -1834,9 +1964,9 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
       consoleLogSpy.mockClear();
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--detail', 'GET api.example.com/huge']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--detail', 'GET api.example.com/huge']);
 
       const out = lastJsonLog();
       expect(out.body_truncated).toBe(true);
@@ -1857,10 +1987,10 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
       consoleLogSpy.mockClear();
       await program.parseAsync([
-        'node', 'opencli', 'browser', 'network',
+        'node', 'opencli', 'browser', '--session', 'test', 'network',
         '--detail', 'GET api.example.com/plain',
         '--max-body', '100',
       ]);
@@ -1885,10 +2015,10 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
       consoleLogSpy.mockClear();
       await program.parseAsync([
-        'node', 'opencli', 'browser', 'network',
+        'node', 'opencli', 'browser', '--session', 'test', 'network',
         '--detail', 'GET api.example.com/json',
         '--max-body', '10',
       ]);
@@ -1912,10 +2042,10 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network']);
       consoleLogSpy.mockClear();
       await program.parseAsync([
-        'node', 'opencli', 'browser', 'network',
+        'node', 'opencli', 'browser', '--session', 'test', 'network',
         '--detail', 'GET api.example.com/x',
         '--max-body', 'abc',
       ]);
@@ -1938,7 +2068,7 @@ describe('browser network command', () => {
       ]);
       const program = createProgram('', '');
 
-      await program.parseAsync(['node', 'opencli', 'browser', 'network', '--raw']);
+      await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'network', '--raw']);
 
       const out = lastJsonLog();
       expect(out.entries).toHaveLength(1);
@@ -1962,6 +2092,7 @@ describe('browser console command', () => {
     mockBrowserClose.mockReset().mockResolvedValue(undefined);
     const now = Date.now();
     browserState.page = {
+      session: 'test',
       setActivePage: vi.fn(),
       getActivePage: vi.fn().mockReturnValue('tab-1'),
       tabs: vi.fn().mockResolvedValue([{ page: 'tab-1', active: true }]),
@@ -1984,7 +2115,7 @@ describe('browser console command', () => {
   it('filters console messages by level and time window', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'console', '--level', 'error', '--since', '120s']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'console', '--level', 'error', '--since', '120s']);
 
     const out = lastJsonLog();
     expect(out.count).toBe(1);
@@ -2026,7 +2157,7 @@ describe('browser get html command', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce({ kind: 'ok', html: big });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html']);
 
     expect(lastLogArg()).toBe(big);
   });
@@ -2036,7 +2167,7 @@ describe('browser get html command', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce({ kind: 'ok', html: big });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--max', '100']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--max', '100']);
 
     const out = String(lastLogArg());
     expect(out.startsWith('<!-- opencli: truncated 100 of')).toBe(true);
@@ -2047,7 +2178,7 @@ describe('browser get html command', () => {
   it('rejects negative --max with invalid_max error', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--max', '-1']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--max', '-1']);
 
     expect(lastJsonLog().error.code).toBe('invalid_max');
     expect(process.exitCode).toBeDefined();
@@ -2057,7 +2188,7 @@ describe('browser get html command', () => {
   it('rejects fractional --max with invalid_max error', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--max', '1.5']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--max', '1.5']);
 
     expect(lastJsonLog().error.code).toBe('invalid_max');
     expect(process.exitCode).toBeDefined();
@@ -2067,7 +2198,7 @@ describe('browser get html command', () => {
   it('rejects non-numeric --max (e.g. "10abc") with invalid_max error', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--max', '10abc']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--max', '10abc']);
 
     expect(lastJsonLog().error.code).toBe('invalid_max');
     expect(process.exitCode).toBeDefined();
@@ -2082,7 +2213,7 @@ describe('browser get html command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--selector', '.hero', '--as', 'json']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--selector', '.hero', '--as', 'json']);
 
     const out = lastJsonLog();
     expect(out.matched).toBe(1);
@@ -2094,7 +2225,7 @@ describe('browser get html command', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce({ selector: '.missing', matched: 0, tree: null });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--selector', '.missing', '--as', 'json']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--selector', '.missing', '--as', 'json']);
 
     expect(lastJsonLog().error.code).toBe('selector_not_found');
     expect(process.exitCode).toBeDefined();
@@ -2104,7 +2235,7 @@ describe('browser get html command', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce({ kind: 'ok', html: null });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--selector', '.missing']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--selector', '.missing']);
 
     expect(lastJsonLog().error.code).toBe('selector_not_found');
     expect(process.exitCode).toBeDefined();
@@ -2117,7 +2248,7 @@ describe('browser get html command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--selector', '##$@@']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--selector', '##$@@']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('invalid_selector');
@@ -2134,7 +2265,7 @@ describe('browser get html command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--selector', '##$@@', '--as', 'json']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--selector', '##$@@', '--as', 'json']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('invalid_selector');
@@ -2145,7 +2276,7 @@ describe('browser get html command', () => {
   it('rejects unknown --as format with invalid_format error', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'html', '--as', 'yaml']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'html', '--as', 'yaml']);
 
     expect(lastJsonLog().error.code).toBe('invalid_format');
     expect(process.exitCode).toBeDefined();
@@ -2181,6 +2312,7 @@ function installSelectorFirstTestHarness(label: string, pageOverrides: () => Par
       setActivePage: vi.fn(),
       getActivePage: vi.fn().mockReturnValue('tab-1'),
       tabs: vi.fn().mockResolvedValue([{ page: 'tab-1', active: true }]),
+      session: 'test',
       ...pageOverrides(),
     } as unknown as IPage;
   });
@@ -2206,7 +2338,7 @@ describe('browser find command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--css', '.btn']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--css', '.btn']);
 
     const out = lastJsonLog();
     expect(out.matches_n).toBe(2);
@@ -2225,7 +2357,7 @@ describe('browser find command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--role', 'button', '--name', 'Save']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--role', 'button', '--name', 'Save']);
 
     const js = (browserState.page!.evaluate as any).mock.calls[0][0] as string;
     expect(js).toContain('CRITERIA');
@@ -2242,7 +2374,7 @@ describe('browser find command', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce({ matches_n: 0, entries: [] });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--css', '.btn', '--limit', '3', '--text-max', '20']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--css', '.btn', '--limit', '3', '--text-max', '20']);
 
     const js = (browserState.page!.evaluate as any).mock.calls[0][0] as string;
     expect(js).toContain('LIMIT = 3');
@@ -2255,7 +2387,7 @@ describe('browser find command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--css', '>>>']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--css', '>>>']);
 
     expect(lastJsonLog().error.code).toBe('invalid_selector');
     expect(process.exitCode).toBeDefined();
@@ -2267,7 +2399,7 @@ describe('browser find command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--css', '.missing']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--css', '.missing']);
 
     expect(lastJsonLog().error.code).toBe('selector_not_found');
     expect(process.exitCode).toBeDefined();
@@ -2276,7 +2408,7 @@ describe('browser find command', () => {
   it('rejects missing --css with usage_error (no evaluate call)', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find']);
 
     expect(lastJsonLog().error.code).toBe('usage_error');
     expect(browserState.page!.evaluate).not.toHaveBeenCalled();
@@ -2286,7 +2418,7 @@ describe('browser find command', () => {
   it('rejects malformed --limit with usage_error (no evaluate call)', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'find', '--css', '.btn', '--limit', 'abc']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'find', '--css', '.btn', '--limit', 'abc']);
 
     expect(lastJsonLog().error.code).toBe('usage_error');
     expect(browserState.page!.evaluate).not.toHaveBeenCalled();
@@ -2307,7 +2439,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce('Hello world');
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '7']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '7']);
 
     expect(lastJsonLog()).toEqual({ value: 'Hello world', matches_n: 1, match_level: 'exact' });
   });
@@ -2324,7 +2456,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce('Save');
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '--role', 'button', '--name', 'Save']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '--role', 'button', '--name', 'Save']);
 
     expect(evalMock.mock.calls[0][0]).toContain('function accessibleName');
     expect(evalMock.mock.calls[1][0]).toContain('const ref = "12"');
@@ -2345,7 +2477,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce('Save');
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '--role', 'button', '--name', 'Save']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '--role', 'button', '--name', 'Save']);
 
     expect(evalMock.mock.calls[0][0]).toContain('const LIMIT = 6');
     expect(evalMock.mock.calls[1][0]).toContain('const ref = "12"');
@@ -2358,7 +2490,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce('first');
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '.btn']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '.btn']);
 
     expect(lastJsonLog()).toEqual({ value: 'first', matches_n: 3, match_level: 'exact' });
   });
@@ -2370,7 +2502,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce(JSON.stringify({ id: 'nav', class: 'hero' }));
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'attributes', '#nav']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'attributes', '#nav']);
 
     const out = lastJsonLog();
     expect(out.matches_n).toBe(1);
@@ -2387,7 +2519,7 @@ describe('browser get text/value/attributes commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '.missing']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '.missing']);
 
     expect(lastJsonLog().error.code).toBe('selector_not_found');
     expect(process.exitCode).toBeDefined();
@@ -2399,7 +2531,7 @@ describe('browser get text/value/attributes commands', () => {
     evalMock.mockResolvedValueOnce('second');
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'value', '.btn', '--nth', '1']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'value', '.btn', '--nth', '1']);
 
     const resolveJs = evalMock.mock.calls[0][0] as string;
     // resolveTargetJs embeds nth as a raw number literal; look for the binding
@@ -2410,7 +2542,7 @@ describe('browser get text/value/attributes commands', () => {
   it('rejects malformed --nth with usage_error before touching the page', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'get', 'text', '.btn', '--nth', 'abc']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'get', 'text', '.btn', '--nth', 'abc']);
 
     expect(lastJsonLog().error.code).toBe('usage_error');
     expect(browserState.page!.evaluate).not.toHaveBeenCalled();
@@ -2462,7 +2594,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.click as any).mockResolvedValueOnce({ matches_n: 1, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '#save']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '#save']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('#save', {});
     expect(lastJsonLog()).toEqual({ clicked: true, target: '#save', matches_n: 1, match_level: 'exact' });
@@ -2478,7 +2610,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.click as any).mockResolvedValueOnce({ matches_n: 1, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '--role', 'button', '--name', 'Submit']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '--role', 'button', '--name', 'Submit']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('23', {});
     expect(lastJsonLog()).toEqual({ clicked: true, target: '23', matches_n: 1, match_level: 'exact' });
@@ -2494,7 +2626,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '--role', 'button', '--name', 'Save']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '--role', 'button', '--name', 'Save']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('semantic_ambiguous');
@@ -2512,7 +2644,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'hover', '--role', 'button', '--name', 'Settings']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'hover', '--role', 'button', '--name', 'Settings']);
 
     expect(browserState.page!.hover).toHaveBeenCalledWith('31', {});
     expect(lastJsonLog()).toEqual({ hovered: true, target: '31', matches_n: 1, match_level: 'exact' });
@@ -2528,7 +2660,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.setChecked as any).mockResolvedValueOnce({ checked: true, changed: false, matches_n: 1, match_level: 'exact', kind: 'checkbox' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'check', '--role', 'checkbox', '--name', 'Accept']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'check', '--role', 'checkbox', '--name', 'Accept']);
 
     expect(browserState.page!.setChecked).toHaveBeenCalledWith('32', true, {});
     expect(lastJsonLog()).toEqual({ checked: true, changed: false, target: '32', matches_n: 1, match_level: 'exact', kind: 'checkbox' });
@@ -2555,7 +2687,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'upload', '--role', 'button', '--name', 'Upload receipt', file]);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'upload', '--role', 'button', '--name', 'Upload receipt', file]);
 
     expect(browserState.page!.uploadFiles).toHaveBeenCalledWith('33', [file], {});
     expect(lastJsonLog()).toMatchObject({ uploaded: true, target: '33', files: 1 });
@@ -2574,7 +2706,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.typeText as any).mockResolvedValueOnce({ matches_n: 1, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'type', '--label', 'Email', 'me@example.com']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'type', '--label', 'Email', 'me@example.com']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('34', {});
     expect(browserState.page!.typeText).toHaveBeenCalledWith('34', 'me@example.com', {});
@@ -2599,7 +2731,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'fill', '--label', 'Email', 'me@example.com']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'fill', '--label', 'Email', 'me@example.com']);
 
     expect(browserState.page!.fillText).toHaveBeenCalledWith('35', 'me@example.com', {});
     expect(lastJsonLog()).toMatchObject({ filled: true, verified: true, target: '35', text: 'me@example.com' });
@@ -2634,6 +2766,8 @@ describe('browser click/type commands', () => {
       'node',
       'opencli',
       'browser',
+      '--session',
+      'test',
       'drag',
       '--from-role',
       'button',
@@ -2653,7 +2787,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.click as any).mockResolvedValueOnce({ matches_n: 1, match_level: 'stable' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '7']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '7']);
 
     expect(lastJsonLog()).toEqual({ clicked: true, target: '7', matches_n: 1, match_level: 'stable' });
   });
@@ -2662,7 +2796,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.click as any).mockResolvedValueOnce({ matches_n: 3, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '.btn', '--nth', '2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '.btn', '--nth', '2']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('.btn', { nth: 2 });
     expect(lastJsonLog()).toEqual({ clicked: true, target: '.btn', matches_n: 3, match_level: 'exact' });
@@ -2677,7 +2811,7 @@ describe('browser click/type commands', () => {
     }));
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '.btn']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '.btn']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('selector_ambiguous');
@@ -2694,7 +2828,7 @@ describe('browser click/type commands', () => {
     }));
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '.btn', '--nth', '99']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '.btn', '--nth', '99']);
 
     expect(lastJsonLog().error.code).toBe('selector_nth_out_of_range');
     expect(process.exitCode).toBeDefined();
@@ -2703,7 +2837,7 @@ describe('browser click/type commands', () => {
   it('rejects malformed --nth on click with usage_error before touching the page', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'click', '.btn', '--nth', 'abc']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'click', '.btn', '--nth', 'abc']);
 
     expect(lastJsonLog().error.code).toBe('usage_error');
     expect(browserState.page!.click).not.toHaveBeenCalled();
@@ -2714,7 +2848,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.hover as any).mockResolvedValueOnce({ matches_n: 2, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'hover', '.menu', '--nth', '1']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'hover', '.menu', '--nth', '1']);
 
     expect(browserState.page!.hover).toHaveBeenCalledWith('.menu', { nth: 1 });
     expect(lastJsonLog()).toEqual({ hovered: true, target: '.menu', matches_n: 2, match_level: 'exact' });
@@ -2724,7 +2858,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.focus as any).mockResolvedValueOnce({ focused: true, matches_n: 1, match_level: 'stable' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'focus', '7']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'focus', '7']);
 
     expect(browserState.page!.focus).toHaveBeenCalledWith('7', {});
     expect(lastJsonLog()).toEqual({ focused: true, target: '7', matches_n: 1, match_level: 'stable' });
@@ -2734,7 +2868,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.dblClick as any).mockResolvedValueOnce({ matches_n: 1, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'dblclick', '#row']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'dblclick', '#row']);
 
     expect(browserState.page!.dblClick).toHaveBeenCalledWith('#row', {});
     expect(lastJsonLog()).toEqual({ dblclicked: true, target: '#row', matches_n: 1, match_level: 'exact' });
@@ -2750,7 +2884,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'check', '.todo', '--nth', '1']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'check', '.todo', '--nth', '1']);
 
     expect(browserState.page!.setChecked).toHaveBeenCalledWith('.todo', true, { nth: 1 });
     expect(lastJsonLog()).toEqual({ checked: true, changed: true, target: '.todo', matches_n: 2, match_level: 'exact', kind: 'checkbox' });
@@ -2766,7 +2900,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'uncheck', '#subscribe']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'uncheck', '#subscribe']);
 
     expect(browserState.page!.setChecked).toHaveBeenCalledWith('#subscribe', false, {});
     expect(lastJsonLog()).toEqual({ checked: false, changed: false, target: '#subscribe', matches_n: 1, match_level: 'stable', kind: 'checkbox' });
@@ -2787,7 +2921,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'upload', '#file', file]);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'upload', '#file', file]);
 
     expect(browserState.page!.uploadFiles).toHaveBeenCalledWith('#file', [file], {});
     expect(lastJsonLog()).toEqual({
@@ -2804,7 +2938,7 @@ describe('browser click/type commands', () => {
   it('upload: rejects missing files before touching the page', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'upload', '#file', '/tmp/opencli-missing-file']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'upload', '#file', '/tmp/opencli-missing-file']);
 
     expect(lastJsonLog().error.code).toBe('file_not_found');
     expect(browserState.page!.uploadFiles).not.toHaveBeenCalled();
@@ -2823,7 +2957,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'drag', '.card', '.lane', '--from-nth', '2', '--to-nth', '1']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'drag', '.card', '.lane', '--from-nth', '2', '--to-nth', '1']);
 
     expect(browserState.page!.drag).toHaveBeenCalledWith('.card', '.lane', { from: { nth: 2 }, to: { nth: 1 } });
     expect(lastJsonLog()).toEqual({
@@ -2840,7 +2974,7 @@ describe('browser click/type commands', () => {
   it('drag: rejects malformed --from-nth before touching the page', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'drag', '.card', '.lane', '--from-nth', 'abc']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'drag', '.card', '.lane', '--from-nth', 'abc']);
 
     expect(lastJsonLog().error.code).toBe('usage_error');
     expect(browserState.page!.drag).not.toHaveBeenCalled();
@@ -2853,7 +2987,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce(false); // isAutocomplete
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'type', '#q', 'hello']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'type', '#q', 'hello']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('#q', {});
     expect(browserState.page!.wait).toHaveBeenCalledWith(0.3);
@@ -2869,7 +3003,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce(true);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'type', '#q', 'hi']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'type', '#q', 'hi']);
 
     const waitCalls = (browserState.page!.wait as any).mock.calls;
     expect(waitCalls).toContainEqual([0.3]);
@@ -2884,7 +3018,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.evaluate as any).mockResolvedValueOnce(false);
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'type', '9', 'hi']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'type', '9', 'hi']);
 
     // The typeText call is the authoritative match_level source for the `type` envelope.
     expect(lastJsonLog().match_level).toBe('reidentified');
@@ -2895,7 +3029,7 @@ describe('browser click/type commands', () => {
     (browserState.page!.typeText as any).mockResolvedValueOnce({ matches_n: 5, match_level: 'exact' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'type', '.field', 'x', '--nth', '3']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'type', '.field', 'x', '--nth', '3']);
 
     expect(browserState.page!.click).toHaveBeenCalledWith('.field', { nth: 3 });
     expect(browserState.page!.typeText).toHaveBeenCalledWith('.field', 'x', { nth: 3 });
@@ -2914,7 +3048,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'fill', '#msg', 'line1\\n/ / raw']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'fill', '#msg', 'line1\\n/ / raw']);
 
     expect(browserState.page!.fillText).toHaveBeenCalledWith('#msg', 'line1\\n/ / raw', {});
     expect(lastJsonLog()).toEqual({
@@ -2943,7 +3077,7 @@ describe('browser click/type commands', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'fill', '#msg', 'expected']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'fill', '#msg', 'expected']);
 
     expect(lastJsonLog()).toEqual({
       filled: true,
@@ -2961,7 +3095,7 @@ describe('browser click/type commands', () => {
   it('fill: forwards --nth to page.fillText', async () => {
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'fill', '.field', 'x', '--nth', '2']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'fill', '.field', 'x', '--nth', '2']);
 
     expect(browserState.page!.fillText).toHaveBeenCalledWith('.field', 'x', { nth: 2 });
   });
@@ -2978,7 +3112,7 @@ describe('browser select command', () => {
     evalMock.mockResolvedValueOnce({ selected: 'US' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'select', '#country', 'US']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'select', '#country', 'US']);
 
     expect(lastJsonLog()).toEqual({ selected: 'US', target: '#country', matches_n: 1, match_level: 'exact' });
   });
@@ -2989,7 +3123,7 @@ describe('browser select command', () => {
     evalMock.mockResolvedValueOnce({ error: 'Not a <select>' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'select', '#not-select', 'US']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'select', '#not-select', 'US']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('not_a_select');
@@ -3003,7 +3137,7 @@ describe('browser select command', () => {
     evalMock.mockResolvedValueOnce({ error: 'Option "XX" not found', available: ['US', 'CA'] });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'select', '#country', 'XX']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'select', '#country', 'XX']);
 
     const err = lastJsonLog().error;
     expect(err.code).toBe('option_not_found');
@@ -3024,7 +3158,7 @@ describe('browser select command', () => {
       .mockResolvedValueOnce({ selected: 'Uruguay' });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'select', '--label', 'Country', 'Uruguay']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'select', '--label', 'Country', 'Uruguay']);
 
     expect(lastJsonLog()).toEqual({ selected: 'Uruguay', target: '36', matches_n: 1, match_level: 'exact' });
   });
@@ -3039,7 +3173,7 @@ describe('browser select command', () => {
     });
     const program = createProgram('', '');
 
-    await program.parseAsync(['node', 'opencli', 'browser', 'select', '.dropdown', 'US']);
+    await program.parseAsync(['node', 'opencli', 'browser', '--session', 'test', 'select', '.dropdown', 'US']);
 
     expect(lastJsonLog().error.code).toBe('selector_ambiguous');
     // The select payload JS must not fire when resolution fails
