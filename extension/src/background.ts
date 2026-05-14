@@ -18,6 +18,7 @@ let reconnectAttempts = 0;
 const CONTEXT_ID_KEY = 'opencli_context_id_v1';
 let currentContextId = 'default';
 let contextIdPromise: Promise<string> | null = null;
+let connectInFlight: Promise<void> | null = null;
 
 async function getCurrentContextId(): Promise<string> {
   if (contextIdPromise) return contextIdPromise;
@@ -77,9 +78,7 @@ function forwardLog(level: 'info' | 'warn' | 'error', args: unknown[]): void {
 }
 
 function safeSend(socket: WebSocket | null | undefined, payload: unknown): boolean {
-  if (!socket || socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
-    return false;
-  }
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
   try {
     socket.send(JSON.stringify(payload));
     return true;
@@ -94,6 +93,10 @@ console.error = (...args: unknown[]) => { _origError(...args); forwardLog('error
 
 // ─── WebSocket connection ────────────────────────────────────────────
 
+function isDaemonSocketActive(socket: WebSocket | null | undefined = ws): boolean {
+  return socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING;
+}
+
 /**
  * Probe the daemon via its /ping HTTP endpoint before attempting a WebSocket
  * connection.  fetch() failures are silently catchable; new WebSocket() is not
@@ -101,8 +104,17 @@ console.error = (...args: unknown[]) => { _origError(...args); forwardLog('error
  * JS handler can intercept it.  By keeping the probe inside connect() every
  * call site remains unchanged and the guard can never be accidentally skipped.
  */
-async function connect(): Promise<void> {
-  if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
+function connect(): Promise<void> {
+  if (isDaemonSocketActive()) return Promise.resolve();
+  if (connectInFlight) return connectInFlight;
+  connectInFlight = connectAttempt().finally(() => {
+    connectInFlight = null;
+  });
+  return connectInFlight;
+}
+
+async function connectAttempt(): Promise<void> {
+  if (isDaemonSocketActive()) return;
 
   try {
     const res = await fetch(DAEMON_PING_URL, { signal: AbortSignal.timeout(1000) });
@@ -110,10 +122,12 @@ async function connect(): Promise<void> {
   } catch {
     return; // daemon not running — skip WebSocket to avoid console noise
   }
+  if (isDaemonSocketActive()) return;
 
   let thisWs: WebSocket;
   try {
     const contextId = await getCurrentContextId();
+    if (isDaemonSocketActive()) return;
     thisWs = new WebSocket(DAEMON_WS_URL);
     ws = thisWs;
     currentContextId = contextId;
@@ -140,9 +154,11 @@ async function connect(): Promise<void> {
   };
 
   thisWs.onmessage = async (event) => {
+    if (ws !== thisWs) return;
     try {
       const command = JSON.parse(event.data as string) as Command;
       const result = await handleCommand(command);
+      if (ws !== thisWs) return;
       safeSend(thisWs, result);
     } catch (err) {
       console.error('[opencli] Message handling error:', err);
@@ -524,10 +540,42 @@ function getOwnedContainerGroupTitles(role: OwnedWindowRole): string[] {
     : [CONTAINER_TAB_GROUP_TITLE.interactive];
 }
 
+type OwnedContainerDiscoveryCandidate = {
+  windowId: number;
+  groupId: number;
+  focused: boolean;
+  hasReusableTab: boolean;
+};
+
 async function focusOwnedWindowIfRequested(windowId: number, mode: WindowMode): Promise<void> {
   if (mode !== 'foreground') return;
   const updateWindow = (chrome.windows as unknown as { update?: (windowId: number, updateInfo: { focused?: boolean }) => Promise<unknown> }).update;
   if (typeof updateWindow === 'function') await updateWindow(windowId, { focused: true }).catch(() => {});
+}
+
+async function toOwnedContainerDiscoveryCandidate(group: chrome.tabGroups.TabGroup): Promise<OwnedContainerDiscoveryCandidate | null> {
+  try {
+    const chromeWindow = await chrome.windows.get(group.windowId);
+    const reusableTabId = await findReusableOwnedContainerTab(group.windowId);
+    return {
+      windowId: group.windowId,
+      groupId: group.id,
+      focused: !!chromeWindow.focused,
+      hasReusableTab: reusableTabId !== undefined,
+    };
+  } catch {
+    // Ignore stale browser-session group/window state and keep looking.
+    return null;
+  }
+}
+
+function selectOwnedContainerDiscoveryCandidate(candidates: OwnedContainerDiscoveryCandidate[]): OwnedContainerDiscoveryCandidate | null {
+  if (candidates.length === 0) return null;
+  return [...candidates].sort((a, b) => {
+    if (a.focused !== b.focused) return a.focused ? -1 : 1;
+    if (a.hasReusableTab !== b.hasReusableTab) return a.hasReusableTab ? -1 : 1;
+    return a.groupId - b.groupId;
+  })[0];
 }
 
 async function discoverOwnedContainerFromTabGroup(role: OwnedWindowRole): Promise<{ windowId: number; groupId: number } | null> {
@@ -546,16 +594,13 @@ async function discoverOwnedContainerFromTabGroup(role: OwnedWindowRole): Promis
 
   for (const title of getOwnedContainerGroupTitles(role)) {
     const groups = await chrome.tabGroups.query({ title });
-    for (const group of groups) {
-      try {
-        await chrome.windows.get(group.windowId);
-        container.windowId = group.windowId;
-        container.groupId = group.id;
-        return { windowId: group.windowId, groupId: group.id };
-      } catch {
-        // Ignore stale browser-session group/window state and keep looking.
-      }
-    }
+    const candidates = (await Promise.all(groups.map(toOwnedContainerDiscoveryCandidate)))
+      .filter((candidate): candidate is OwnedContainerDiscoveryCandidate => candidate !== null);
+    const selected = selectOwnedContainerDiscoveryCandidate(candidates);
+    if (!selected) continue;
+    container.windowId = selected.windowId;
+    container.groupId = selected.groupId;
+    return { windowId: selected.windowId, groupId: selected.groupId };
   }
 
   return null;

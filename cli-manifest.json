@@ -4036,6 +4036,47 @@
     "navigateBefore": false
   },
   {
+    "site": "brave",
+    "name": "search",
+    "description": "Search Brave Search",
+    "access": "read",
+    "domain": "search.brave.com",
+    "strategy": "public",
+    "browser": true,
+    "args": [
+      {
+        "name": "keyword",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Search query"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 10,
+        "required": false,
+        "help": "Number of results per page (max 18)"
+      },
+      {
+        "name": "offset",
+        "type": "int",
+        "default": 0,
+        "required": false,
+        "help": "Page offset (0, 1, 2...). Brave returns ~18 results per page"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "url",
+      "snippet"
+    ],
+    "type": "js",
+    "modulePath": "brave/search.js",
+    "sourceFile": "brave/search.js"
+  },
+  {
     "site": "chaoxing",
     "name": "assignments",
     "description": "学习通作业列表",
@@ -8731,6 +8772,93 @@
     "navigateBefore": "https://creator.douyin.com"
   },
   {
+    "site": "duckduckgo",
+    "name": "search",
+    "description": "Search DuckDuckGo",
+    "access": "read",
+    "domain": "html.duckduckgo.com",
+    "strategy": "public",
+    "browser": true,
+    "args": [
+      {
+        "name": "keyword",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Search query"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 10,
+        "required": false,
+        "help": "Number of results per page (1-10). For multi-page, use --offset"
+      },
+      {
+        "name": "offset",
+        "type": "int",
+        "default": 0,
+        "required": false,
+        "help": "Result offset for pagination (0, 10, 20...). Uses XHR POST internally"
+      },
+      {
+        "name": "region",
+        "type": "str",
+        "required": false,
+        "help": "Region code (e.g. jp-jp, us-en, cn-zh). Default: all regions"
+      },
+      {
+        "name": "time",
+        "type": "str",
+        "required": false,
+        "help": "Time range: d (day), w (week), m (month), y (year)"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "url",
+      "snippet",
+      "displayUrl",
+      "icon",
+      "resultType"
+    ],
+    "type": "js",
+    "modulePath": "duckduckgo/search.js",
+    "sourceFile": "duckduckgo/search.js"
+  },
+  {
+    "site": "duckduckgo",
+    "name": "suggest",
+    "description": "DuckDuckGo search suggestions",
+    "access": "read",
+    "domain": "duckduckgo.com",
+    "strategy": "public",
+    "browser": false,
+    "args": [
+      {
+        "name": "keyword",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Search query prefix"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 8,
+        "required": false,
+        "help": "Max number of suggestions"
+      }
+    ],
+    "columns": [
+      "phrase"
+    ],
+    "type": "js",
+    "modulePath": "duckduckgo/suggest.js",
+    "sourceFile": "duckduckgo/suggest.js"
+  },
+  {
     "site": "eastmoney",
     "name": "announcement",
     "description": "上市公司公告（按交易所筛选）",
@@ -9413,7 +9541,7 @@
     "type": "js",
     "modulePath": "facebook/feed.js",
     "sourceFile": "facebook/feed.js",
-    "navigateBefore": "https://www.facebook.com"
+    "navigateBefore": false
   },
   {
     "site": "facebook",
@@ -15780,181 +15908,6 @@
     "navigateBefore": false
   },
   {
-    "site": "notion",
-    "name": "export",
-    "description": "Export the current Notion page as Markdown",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [
-      {
-        "name": "output",
-        "type": "str",
-        "required": false,
-        "help": "Output file (default: /tmp/notion-export.md)"
-      }
-    ],
-    "columns": [
-      "Status",
-      "File"
-    ],
-    "type": "js",
-    "modulePath": "notion/export.js",
-    "sourceFile": "notion/export.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "favorites",
-    "description": "List pages from the Notion Favorites section in the sidebar",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [],
-    "columns": [
-      "Index",
-      "Title",
-      "Icon"
-    ],
-    "type": "js",
-    "modulePath": "notion/favorites.js",
-    "sourceFile": "notion/favorites.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "new",
-    "description": "Create a new page in Notion",
-    "access": "write",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [
-      {
-        "name": "title",
-        "type": "str",
-        "required": false,
-        "positional": true,
-        "help": "Page title (optional)"
-      }
-    ],
-    "columns": [
-      "Status"
-    ],
-    "type": "js",
-    "modulePath": "notion/new.js",
-    "sourceFile": "notion/new.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "read",
-    "description": "Read the content of the currently open Notion page",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [],
-    "columns": [
-      "Title",
-      "Content"
-    ],
-    "type": "js",
-    "modulePath": "notion/read.js",
-    "sourceFile": "notion/read.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "search",
-    "description": "Search pages and databases in Notion via Quick Find (Cmd+P)",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [
-      {
-        "name": "query",
-        "type": "str",
-        "required": true,
-        "positional": true,
-        "help": "Search query"
-      }
-    ],
-    "columns": [
-      "Index",
-      "Title"
-    ],
-    "type": "js",
-    "modulePath": "notion/search.js",
-    "sourceFile": "notion/search.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "sidebar",
-    "description": "List pages and databases from the Notion sidebar",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [],
-    "columns": [
-      "Index",
-      "Title"
-    ],
-    "type": "js",
-    "modulePath": "notion/sidebar.js",
-    "sourceFile": "notion/sidebar.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "status",
-    "description": "Check active CDP connection to Notion Desktop",
-    "access": "read",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [],
-    "columns": [
-      "Status",
-      "Url",
-      "Title"
-    ],
-    "type": "js",
-    "modulePath": "notion/status.js",
-    "sourceFile": "notion/status.js",
-    "navigateBefore": true
-  },
-  {
-    "site": "notion",
-    "name": "write",
-    "description": "Append text content to the currently open Notion page",
-    "access": "write",
-    "domain": "localhost",
-    "strategy": "ui",
-    "browser": true,
-    "args": [
-      {
-        "name": "text",
-        "type": "str",
-        "required": true,
-        "positional": true,
-        "help": "Text to append to the page"
-      }
-    ],
-    "columns": [
-      "Status"
-    ],
-    "type": "js",
-    "modulePath": "notion/write.js",
-    "sourceFile": "notion/write.js",
-    "navigateBefore": true
-  },
-  {
     "site": "nowcoder",
     "name": "companies",
     "description": "Hot companies for interview prep",
@@ -19191,8 +19144,7 @@
     "type": "js",
     "modulePath": "reddit/comment.js",
     "sourceFile": "reddit/comment.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19222,8 +19174,7 @@
     "type": "js",
     "modulePath": "reddit/frontpage.js",
     "sourceFile": "reddit/frontpage.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19255,8 +19206,7 @@
     "type": "js",
     "modulePath": "reddit/home.js",
     "sourceFile": "reddit/home.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19325,8 +19275,7 @@
     "type": "js",
     "modulePath": "reddit/popular.js",
     "sourceFile": "reddit/popular.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19403,8 +19352,7 @@
     "type": "js",
     "modulePath": "reddit/read.js",
     "sourceFile": "reddit/read.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19470,8 +19418,7 @@
     "type": "js",
     "modulePath": "reddit/save.js",
     "sourceFile": "reddit/save.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19500,8 +19447,7 @@
     "type": "js",
     "modulePath": "reddit/saved.js",
     "sourceFile": "reddit/saved.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19559,8 +19505,7 @@
     "type": "js",
     "modulePath": "reddit/search.js",
     "sourceFile": "reddit/search.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19610,8 +19555,7 @@
     "type": "js",
     "modulePath": "reddit/subreddit.js",
     "sourceFile": "reddit/subreddit.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19637,8 +19581,7 @@
     "type": "js",
     "modulePath": "reddit/subreddit-info.js",
     "sourceFile": "reddit/subreddit-info.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19671,8 +19614,7 @@
     "type": "js",
     "modulePath": "reddit/subscribe.js",
     "sourceFile": "reddit/subscribe.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19705,8 +19647,7 @@
     "type": "js",
     "modulePath": "reddit/upvote.js",
     "sourceFile": "reddit/upvote.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19735,8 +19676,7 @@
     "type": "js",
     "modulePath": "reddit/upvoted.js",
     "sourceFile": "reddit/upvoted.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19762,8 +19702,7 @@
     "type": "js",
     "modulePath": "reddit/user.js",
     "sourceFile": "reddit/user.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19798,8 +19737,7 @@
     "type": "js",
     "modulePath": "reddit/user-comments.js",
     "sourceFile": "reddit/user-comments.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19835,8 +19773,7 @@
     "type": "js",
     "modulePath": "reddit/user-posts.js",
     "sourceFile": "reddit/user-posts.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "reddit",
@@ -19854,8 +19791,7 @@
     "type": "js",
     "modulePath": "reddit/whoami.js",
     "sourceFile": "reddit/whoami.js",
-    "navigateBefore": "https://reddit.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://reddit.com"
   },
   {
     "site": "rednote",
@@ -22643,8 +22579,7 @@
     "type": "js",
     "modulePath": "twitter/article.js",
     "sourceFile": "twitter/article.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -22737,13 +22672,14 @@
       "retweets",
       "bookmarks",
       "created_at",
-      "url"
+      "url",
+      "has_media",
+      "media_urls"
     ],
     "type": "js",
     "modulePath": "twitter/bookmark-folder.js",
     "sourceFile": "twitter/bookmark-folder.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -22763,8 +22699,7 @@
     "type": "js",
     "modulePath": "twitter/bookmark-folders.js",
     "sourceFile": "twitter/bookmark-folders.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -22798,13 +22733,14 @@
       "retweets",
       "bookmarks",
       "created_at",
-      "url"
+      "url",
+      "has_media",
+      "media_urls"
     ],
     "type": "js",
     "modulePath": "twitter/bookmarks.js",
     "sourceFile": "twitter/bookmarks.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -22878,8 +22814,7 @@
     "type": "js",
     "modulePath": "twitter/download.js",
     "sourceFile": "twitter/download.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -22939,8 +22874,7 @@
     "type": "js",
     "modulePath": "twitter/followers.js",
     "sourceFile": "twitter/followers.js",
-    "navigateBefore": true,
-    "siteSession": "persistent"
+    "navigateBefore": true
   },
   {
     "site": "twitter",
@@ -22975,8 +22909,7 @@
     "type": "js",
     "modulePath": "twitter/following.js",
     "sourceFile": "twitter/following.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23076,8 +23009,7 @@
     "type": "js",
     "modulePath": "twitter/likes.js",
     "sourceFile": "twitter/likes.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23197,8 +23129,7 @@
     "type": "js",
     "modulePath": "twitter/list-tweets.js",
     "sourceFile": "twitter/list-tweets.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23227,8 +23158,7 @@
     "type": "js",
     "modulePath": "twitter/lists.js",
     "sourceFile": "twitter/lists.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23257,8 +23187,7 @@
     "type": "js",
     "modulePath": "twitter/notifications.js",
     "sourceFile": "twitter/notifications.js",
-    "navigateBefore": true,
-    "siteSession": "persistent"
+    "navigateBefore": true
   },
   {
     "site": "twitter",
@@ -23328,8 +23257,7 @@
     "type": "js",
     "modulePath": "twitter/profile.js",
     "sourceFile": "twitter/profile.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23598,8 +23526,7 @@
     "type": "js",
     "modulePath": "twitter/search.js",
     "sourceFile": "twitter/search.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23645,8 +23572,7 @@
     "type": "js",
     "modulePath": "twitter/thread.js",
     "sourceFile": "twitter/thread.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23699,8 +23625,7 @@
     "type": "js",
     "modulePath": "twitter/timeline.js",
     "sourceFile": "twitter/timeline.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23727,8 +23652,7 @@
     "type": "js",
     "modulePath": "twitter/trending.js",
     "sourceFile": "twitter/trending.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -23778,8 +23702,7 @@
     "type": "js",
     "modulePath": "twitter/tweets.js",
     "sourceFile": "twitter/tweets.js",
-    "navigateBefore": "https://x.com",
-    "siteSession": "persistent"
+    "navigateBefore": "https://x.com"
   },
   {
     "site": "twitter",
@@ -26895,6 +26818,47 @@
     "modulePath": "xueqiu/watchlist.js",
     "sourceFile": "xueqiu/watchlist.js",
     "navigateBefore": "https://xueqiu.com"
+  },
+  {
+    "site": "yahoo",
+    "name": "search",
+    "description": "Search Yahoo (powered by Bing)",
+    "access": "read",
+    "domain": "search.yahoo.com",
+    "strategy": "public",
+    "browser": true,
+    "args": [
+      {
+        "name": "keyword",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Search query"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": 7,
+        "required": false,
+        "help": "Number of results per page (max 7)"
+      },
+      {
+        "name": "page",
+        "type": "int",
+        "default": 1,
+        "required": false,
+        "help": "Page number (1, 2, 3...). Yahoo returns ~7 results per page"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "url",
+      "snippet"
+    ],
+    "type": "js",
+    "modulePath": "yahoo/search.js",
+    "sourceFile": "yahoo/search.js"
   },
   {
     "site": "yahoo-finance",

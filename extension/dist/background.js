@@ -626,6 +626,7 @@ let reconnectAttempts = 0;
 const CONTEXT_ID_KEY = "opencli_context_id_v1";
 let currentContextId = "default";
 let contextIdPromise = null;
+let connectInFlight = null;
 async function getCurrentContextId() {
   if (contextIdPromise) return contextIdPromise;
   contextIdPromise = (async () => {
@@ -678,9 +679,7 @@ function forwardLog(level, args) {
   }
 }
 function safeSend(socket, payload) {
-  if (!socket || socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
-    return false;
-  }
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
   try {
     socket.send(JSON.stringify(payload));
     return true;
@@ -700,17 +699,30 @@ console.error = (...args) => {
   _origError(...args);
   forwardLog("error", args);
 };
-async function connect() {
-  if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
+function isDaemonSocketActive(socket = ws) {
+  return socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING;
+}
+function connect() {
+  if (isDaemonSocketActive()) return Promise.resolve();
+  if (connectInFlight) return connectInFlight;
+  connectInFlight = connectAttempt().finally(() => {
+    connectInFlight = null;
+  });
+  return connectInFlight;
+}
+async function connectAttempt() {
+  if (isDaemonSocketActive()) return;
   try {
     const res = await fetch(DAEMON_PING_URL, { signal: AbortSignal.timeout(1e3) });
     if (!res.ok) return;
   } catch {
     return;
   }
+  if (isDaemonSocketActive()) return;
   let thisWs;
   try {
     const contextId = await getCurrentContextId();
+    if (isDaemonSocketActive()) return;
     thisWs = new WebSocket(DAEMON_WS_URL);
     ws = thisWs;
     currentContextId = contextId;
@@ -734,9 +746,11 @@ async function connect() {
     });
   };
   thisWs.onmessage = async (event) => {
+    if (ws !== thisWs) return;
     try {
       const command = JSON.parse(event.data);
       const result = await handleCommand(command);
+      if (ws !== thisWs) return;
       safeSend(thisWs, result);
     } catch (err) {
       console.error("[opencli] Message handling error:", err);
@@ -1028,6 +1042,28 @@ async function focusOwnedWindowIfRequested(windowId, mode) {
   if (typeof updateWindow === "function") await updateWindow(windowId, { focused: true }).catch(() => {
   });
 }
+async function toOwnedContainerDiscoveryCandidate(group) {
+  try {
+    const chromeWindow = await chrome.windows.get(group.windowId);
+    const reusableTabId = await findReusableOwnedContainerTab(group.windowId);
+    return {
+      windowId: group.windowId,
+      groupId: group.id,
+      focused: !!chromeWindow.focused,
+      hasReusableTab: reusableTabId !== void 0
+    };
+  } catch {
+    return null;
+  }
+}
+function selectOwnedContainerDiscoveryCandidate(candidates) {
+  if (candidates.length === 0) return null;
+  return [...candidates].sort((a, b) => {
+    if (a.focused !== b.focused) return a.focused ? -1 : 1;
+    if (a.hasReusableTab !== b.hasReusableTab) return a.hasReusableTab ? -1 : 1;
+    return a.groupId - b.groupId;
+  })[0];
+}
 async function discoverOwnedContainerFromTabGroup(role) {
   const container = ownedContainers[role];
   if (container.groupId !== null) {
@@ -1043,15 +1079,12 @@ async function discoverOwnedContainerFromTabGroup(role) {
   }
   for (const title of getOwnedContainerGroupTitles(role)) {
     const groups = await chrome.tabGroups.query({ title });
-    for (const group of groups) {
-      try {
-        await chrome.windows.get(group.windowId);
-        container.windowId = group.windowId;
-        container.groupId = group.id;
-        return { windowId: group.windowId, groupId: group.id };
-      } catch {
-      }
-    }
+    const candidates = (await Promise.all(groups.map(toOwnedContainerDiscoveryCandidate))).filter((candidate) => candidate !== null);
+    const selected = selectOwnedContainerDiscoveryCandidate(candidates);
+    if (!selected) continue;
+    container.windowId = selected.windowId;
+    container.groupId = selected.groupId;
+    return { windowId: selected.windowId, groupId: selected.groupId };
   }
   return null;
 }
